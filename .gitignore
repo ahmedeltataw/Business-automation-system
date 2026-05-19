@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+*.log
+.DS_Store
+.vscode
+.idea
+test_hf_*
+release_lock.ts
+files/
+src/scripts/archive/

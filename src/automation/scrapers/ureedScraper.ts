@@ -1,0 +1,85 @@
+import { supabase } from '../../config/db';
+import { ensureSession, SessionExpiredError } from '../sessionManager';
+import { createStealthBrowser, humanDelay } from '../browserConfig';
+import { notifyTelegram } from '../../telegram/notifier';
+import { checkBan } from '../../monitoring/banDetector';
+import { agentConfig } from '../../config/agentConfig';
+
+export interface UreedProject {
+  external_id: string;
+  title: string;
+  description: string;
+  budget: string;
+  budget_currency: string;
+  url: string;
+  posted_at: string;
+  client_name: string;
+}
+
+export async function scrapeUreed(): Promise<UreedProject[]> {
+  const projects: UreedProject[] = [];
+  let cookies: any[];
+  try {
+    cookies = await ensureSession('ureed');
+  } catch (err) {
+    if (err instanceof SessionExpiredError) throw err;
+    console.error('Session fetch failed for ureed:', err);
+    throw err;
+  }
+  const { browser, page } = await createStealthBrowser(true);
+  try {
+    await page.context().addCookies(cookies);
+    const platform = agentConfig.scrapers.platforms.ureed;
+    await page.goto(platform.baseUrl + platform.projectsPath, { waitUntil: 'networkidle', timeout: agentConfig.scrapers.navTimeout });
+    await humanDelay(agentConfig.scrapers.humanDelay.min, agentConfig.scrapers.humanDelay.max);
+    const banResult = await checkBan(page);
+    if (banResult.banned) {
+      await notifyTelegram(`🚨 *Ban Detected on Ureed*\n${banResult.reason}`);
+      return [];
+    }
+    const raw = await page.evaluate(() => {
+      const items: any[] = [];
+      document.querySelectorAll('tr.project-row').forEach(row => {
+        const link = row.querySelector('h2 a');
+        const desc = row.querySelector('p.project__brief');
+        const budgetEl = row.querySelector('[class*="budget"], [class*="Budget"], [class*="price"], [class*="Price"]');
+        const clientEl = row.querySelector('ul.project__meta li bdi');
+        const href = link?.getAttribute('href') ?? '';
+        items.push({
+          title: link?.textContent?.trim() ?? '',
+          description: desc?.textContent?.trim() ?? '',
+          budget: budgetEl?.textContent?.trim() ?? '',
+          url: href,
+          client_name: clientEl?.textContent?.trim() ?? '',
+        });
+      });
+      return items;
+    });
+    for (const item of raw) {
+      const fullUrl = item.url ? (item.url.startsWith('http') ? item.url : `https://ureed.com${item.url}`) : '';
+      const idMatch = fullUrl.match(/\/project[s]?\/(\d+)/);
+      const externalId = idMatch ? idMatch[1] : `ureed-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+      projects.push({
+        external_id: externalId, title: item.title, description: item.description,
+        budget: item.budget, budget_currency: 'USD', url: fullUrl,
+        posted_at: new Date().toISOString(), client_name: item.client_name,
+      });
+    }
+    if (projects.length > 0) {
+      const { error } = await supabase.from('scraped_jobs').upsert(
+        projects.map(p => ({
+          platform: 'ureed', external_id: p.external_id, title: p.title,
+          description: p.description, budget: p.budget, budget_currency: p.budget_currency,
+          skills: [], category: 'Freelance', url: p.url, posted_at: p.posted_at,
+          client_name: p.client_name, client_country: '', raw_data: p, status: 'new',
+        })),
+        { onConflict: 'external_id' }
+      );
+      if (error) console.error('Failed to persist Ureed projects:', error.message);
+      else console.log(`Persisted ${projects.length} Ureed projects`);
+    }
+    return projects;
+  } finally {
+    await browser.close();
+  }
+}

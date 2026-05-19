@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.git
+.gitignore
+.vscode
+.idea
+*.log
+test_hf_*
+release_lock.ts
+files/
+src/scripts/archive/
