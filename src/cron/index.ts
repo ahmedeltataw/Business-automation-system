@@ -65,7 +65,8 @@ switch (mode) {
   case 'production': {
     console.log('[Production] Starting scheduler + Telegram bot...\n');
 
-    // Health HTTP server for Docker HEALTHCHECK
+    // Health HTTP server for Docker HEALTHCHECK / Zeabur health checks
+    const PORT = parseInt(process.env.PORT || '8080', 10);
     const server = http.createServer((req, res) => {
       if (req.url === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -75,7 +76,7 @@ switch (mode) {
         res.end();
       }
     });
-    server.listen(8080, () => console.log('[Health] HTTP health endpoint on :8080'));
+    server.listen(PORT, () => console.log(`[Health] HTTP health endpoint on :${PORT}`));
 
     startAutopilot();
     startBot().catch(err => {
