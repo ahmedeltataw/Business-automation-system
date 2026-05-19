@@ -1,4 +1,4 @@
-name: Scraper Cycle
+name: Automated Scraping Pipeline
 
 on:
   schedule:
