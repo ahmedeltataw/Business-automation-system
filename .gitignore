@@ -6,6 +6,7 @@ dist
 .vscode
 .idea
 test_hf_*
+test_hf.js
 release_lock.ts
 files/
 src/scripts/archive/
