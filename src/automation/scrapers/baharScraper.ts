@@ -1,5 +1,5 @@
 import { supabase } from '../../config/db';
-import { ensureSession, SessionExpiredError } from '../sessionManager';
+import { ensureSession } from '../sessionManager';
 import { createStealthBrowser, humanDelay } from '../browserConfig';
 import { notifyTelegram } from '../../telegram/notifier';
 import { checkBan } from '../../monitoring/banDetector';
@@ -22,16 +22,15 @@ export async function scrapeBahar(): Promise<BaharProject[]> {
   try {
     cookies = await ensureSession('bahar');
   } catch (err) {
-    if (err instanceof SessionExpiredError) throw err;
     console.error('Session fetch failed for bahar:', err);
-    throw err;
+    cookies = [];
   }
   const { browser, page } = await createStealthBrowser(true);
   try {
     await page.context().addCookies(cookies);
     const platform = agentConfig.scrapers.platforms.bahar;
-    await page.goto(platform.baseUrl + platform.projectsPath, { waitUntil: 'networkidle', timeout: agentConfig.scrapers.navTimeout });
-    await humanDelay(agentConfig.scrapers.humanDelay.min, agentConfig.scrapers.humanDelay.max);
+    await page.goto(platform.baseUrl + platform.projectsPath, { waitUntil: 'domcontentloaded', timeout: agentConfig.scrapers.navTimeout });
+    await humanDelay(1000, 2000);
     const banResult = await checkBan(page);
     if (banResult.banned) {
       await notifyTelegram(`🚨 *Ban Detected on Bahar*\n${banResult.reason}`);
