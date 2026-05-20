@@ -48,15 +48,16 @@ export const agentConfig = {
       maxTokens: 1500,
       models: [
         'llama-3.3-70b-versatile',
+        'llama3-8b-8192',
         'llama-3.1-8b-instant',
         'llama-3.2-90b-vision-preview',
         'llama-3.2-11b-vision-preview',
       ],
       keyRotationEnabled: true,
     },
-    qualifyChain: ['groq/llama-3-70b', 'gemini-2.5-pro', 'hf/meta-llama/Llama-3.3-70B-Instruct', 'gemini-2.5-flash', 'gemma-4-31b-it'],
-    proposalChain: ['groq/llama-3-70b', 'gemini-2.5-pro', 'hf/meta-llama/Llama-3.3-70B-Instruct', 'gemini-2.5-flash', 'gemma-4-31b-it'],
-    googleFallbackModels: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemma-4-31b-it'],
+    qualifyChain: ['groq/llama-3-70b', 'gemini-2.5-flash', 'hf/meta-llama/Llama-3.3-70B-Instruct', 'gemini-2.5-pro', 'gemma-4-31b-it'],
+    proposalChain: ['groq/llama-3-70b', 'gemini-2.5-flash', 'hf/meta-llama/Llama-3.3-70B-Instruct', 'gemini-2.5-pro', 'gemma-4-31b-it'],
+    googleFallbackModels: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemma-4-31b-it'],
   },
 
   scoring: {

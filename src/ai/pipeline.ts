@@ -51,8 +51,12 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
       continue;
     }
 
-    const description = (job.description || '').replace(/<[^>]+>/g, '').trim();
-    const title = (job.title || '').trim();
+    const description = (job.description || '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 2000);
+    const title = (job.title || '').trim().slice(0, 150);
     const displayTitle = title.slice(0, 80);
 
     try {
@@ -122,8 +126,8 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
 
     } catch (err: any) {
       if (err instanceof AllModelsExhaustedError) {
-        console.error(`\n🏁 All models exhausted — stopping pipeline. Analyzed ${analyzed} jobs.`);
-        break;
+        console.error(`  [AI] All models rate-limited, skipping this project.`);
+        continue;
       }
       console.error(`  [${job.platform}] Analysis failed: ${displayTitle} — ${err.message}`);
     }
