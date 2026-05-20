@@ -35,14 +35,19 @@ for key in list(os.environ.keys()):
 # Configuration
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Environment — dotenv must load before any ai_router import
+# ---------------------------------------------------------------------------
+
 from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+
 from supabase import create_client, Client
 from pydantic import ValidationError
 
 from ai_router import call
 from schemas import LeadScoreResult, ProposalResult, JobRecord
-
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
