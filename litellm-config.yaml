@@ -1,0 +1,58 @@
+# LiteLLM Configuration — Unified AI Gateway
+# Model aliases map functional names to provider-specific models.
+# The router automatically fallsbs through the alias chain on rate limits or errors.
+
+model_list:
+  # Lead Scorer — fast, cheap inference for job qualification
+  - model_name: lead-scorer
+    litellm_params:
+      model: cloudflare/@cf/meta/llama-3.1-8b-instruct
+      api_base: https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run
+      api_key: os.environ/CLOUDFLARE_API_TOKEN
+    fallbacks:
+      - litellm_params:
+          model: gemini/gemini-2.5-flash
+          api_key: os.environ/GEMINI_API_KEY
+      - litellm_params:
+          model: groq/llama3-8b-8192
+          api_key: os.environ/GROQ_API_KEY
+
+  # Proposal Generator — advanced reasoning for Arabic proposal writing
+  - model_name: proposal-generator
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+    fallbacks:
+      - litellm_params:
+          model: gemini/gemini-2.5-flash
+          api_key: os.environ/GEMINI_API_KEY
+      - litellm_params:
+          model: cloudflare/@cf/meta/llama-3.3-70b-instruct
+          api_base: https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run
+          api_key: os.environ/CLOUDFLARE_API_TOKEN
+
+  # Backup Agent — resilient fallback when primaries are rate-limited
+  - model_name: backup-agent
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+    fallbacks:
+      - litellm_params:
+          model: groq/llama-3.3-70b-versatile
+          api_key: os.environ/GROQ_API_KEY
+      - litellm_params:
+          model: hf/meta-llama/Llama-3.3-70B-Instruct
+          api_key: os.environ/HF_TOKEN
+
+# Global router settings
+router_settings:
+  # Automatic fallback: try next model in alias chain on 429/5xx
+  routing_strategy: simple-shuffle
+  # Max retries per request before giving up
+  num_retries: 3
+  # Cooldown period (seconds) for rate-limited models
+  cooldown_time: 60
+  # Enable context window fallback (retry with shorter prompt)
+  enable_context_fallback: true
+  # Timeout per request (seconds)
+  timeout: 30

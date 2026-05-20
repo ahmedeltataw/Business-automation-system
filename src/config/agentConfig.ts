@@ -55,9 +55,14 @@ export const agentConfig = {
       ],
       keyRotationEnabled: true,
     },
-    qualifyChain: ['gemini-2.5-flash', 'cloudflare/@cf/meta/llama-3.1-8b-instruct', 'groq/llama3-8b-8192', 'hf/meta-llama/Llama-3.3-70B-Instruct', 'gemini-2.5-pro', 'gemma-4-31b-it'],
-    proposalChain: ['gemini-2.5-flash', 'cloudflare/@cf/meta/llama-3.1-8b-instruct', 'groq/llama3-8b-8192', 'hf/meta-llama/Llama-3.3-70B-Instruct', 'gemini-2.5-pro', 'gemma-4-31b-it'],
+    qualifyChain: ['lead-scorer'],
+    proposalChain: ['proposal-generator'],
     googleFallbackModels: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemma-4-31b-it'],
+    litellm: {
+      aliases: ['lead-scorer', 'proposal-generator', 'backup-agent'],
+      cooldownMs: 60000,
+      numRetries: 3,
+    },
     cloudflare: {
       timeoutMs: 30000,
       models: [

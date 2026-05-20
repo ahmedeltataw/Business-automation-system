@@ -15,6 +15,7 @@ interface EnvConfig {
   HF_TOKEN: string;
   CLOUDFLARE_ACCOUNT_ID: string;
   CLOUDFLARE_API_TOKEN: string;
+  DEEPSEEK_API_KEY: string;
 }
 
 function ensure(key: string): string {
@@ -40,6 +41,7 @@ function loadEnv(): EnvConfig {
     HF_TOKEN: optional('HF_TOKEN'),
     CLOUDFLARE_ACCOUNT_ID: optional('CLOUDFLARE_ACCOUNT_ID'),
     CLOUDFLARE_API_TOKEN: optional('CLOUDFLARE_API_TOKEN'),
+    DEEPSEEK_API_KEY: optional('DEEPSEEK_API_KEY'),
   };
 }
 

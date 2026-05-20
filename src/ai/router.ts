@@ -1,10 +1,5 @@
-import { gemini } from './gemini';
-import { groq } from './groq';
-import { huggingface } from './huggingface';
-import { cloudflareAI } from './cloudflare';
+import { litellm, ALIASES } from '../services/litellm';
 import { isModelAvailable, logUsage } from './usageTracker';
-import { notifyTelegram } from '../telegram/notifier';
-import { agentConfig } from '../config/agentConfig';
 
 const SYSTEM_INSTRUCTION = `You are a specialized freelance job analyzer for a development team whose core stack is:
 - **UI/UX**: Figma (wireframing, prototyping, user flows, visual design)
@@ -154,148 +149,44 @@ Description: "${description.trim()}"${metaBlock}
 
 Apply the scoring criteria strictly. Return valid JSON only.`;
 
-    // Use the configured qualify chain for all providers
-    for (const modelName of QUALIFY_CHAIN) {
-      const available = await isModelAvailable(modelName);
-      if (!available) {
-        console.log(`[Router] ${modelName} quota exhausted, trying next...`);
-        continue;
-      }
+    const result = await litellm.callWithSchema('lead-scorer', prompt, SYSTEM_INSTRUCTION, SCHEMA);
+    await logUsage(result.modelUsed, result.tokensUsed, 'qualify');
 
-      try {
-        let result: any;
-        if (modelName.startsWith('gemini') || modelName.startsWith('gemma')) {
-          const r = await gemini.callWithSchema(modelName, prompt, SYSTEM_INSTRUCTION, SCHEMA);
-          result = { text: r.text, tokensUsed: r.tokensUsed, modelUsed: r.modelUsed };
-        } else if (modelName.startsWith('cloudflare/')) {
-          const r = await cloudflareAI.callWithSchema(prompt, SYSTEM_INSTRUCTION, SCHEMA);
-          result = { text: r.text, tokensUsed: r.tokensUsed, modelUsed: r.modelUsed };
-        } else if (modelName.startsWith('hf/')) {
-          const cleanModelName = modelName.replace('hf/', '');
-          const r = await huggingface.call(cleanModelName, prompt, SYSTEM_INSTRUCTION);
-          result = { text: r.text, tokensUsed: r.tokensUsed, modelUsed: r.modelUsed };
-        } else {
-          const r = await groq.call(prompt, SYSTEM_INSTRUCTION);
-          result = { text: r.text, tokensUsed: r.tokensUsed, modelUsed: r.modelUsed };
-        }
-
-        await logUsage(modelName, result.tokensUsed, 'qualify');
-        const jsonText = extractJson(result.text);
-        const parsed: JobAnalysis = JSON.parse(jsonText);
-        validateAnalysis(parsed);
-        return parsed;
-      } catch (err: any) {
-        if (modelName.startsWith('hf/') && err.message.includes('[HF Provider Error]')) {
-          console.error(err.message);
-        } else {
-          console.error(`[Router] ${modelName} failed: ${err.message}`);
-        }
-        continue;
-      }
-    }
-
-    await notifyTelegram('🚨 *All AI models exhausted for job analysis!*');
-    throw new AllModelsExhaustedError();
+    const jsonText = extractJson(result.text);
+    const parsed: JobAnalysis = JSON.parse(jsonText);
+    validateAnalysis(parsed);
+    return parsed;
   }
 }
-
-const QUALIFY_CHAIN = agentConfig.ai.qualifyChain;
-const PROPOSAL_CHAIN = agentConfig.ai.proposalChain;
 
 export async function callAI(
   prompt: string,
   endpoint: Exclude<AIEndpoint, 'propose'>
 ): Promise<RouterResult> {
-  for (const modelName of QUALIFY_CHAIN) {
-    const available = await isModelAvailable(modelName);
-    if (!available) {
-      console.log(`[Router] ${modelName} quota exhausted, trying next...`);
-      continue;
-    }
-
-    try {
-      let result: RouterResult;
-
-      if (modelName.startsWith('gemini') || modelName.startsWith('gemma')) {
-        const r = await gemini.call(modelName, prompt);
-        result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
-      } else if (modelName.startsWith('cloudflare/')) {
-        const r = await cloudflareAI.call(prompt);
-        result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
-      } else if (modelName.startsWith('hf/')) {
-        const cleanModelName = modelName.replace('hf/', '');
-        const r = await huggingface.call(cleanModelName, prompt);
-        result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
-      } else {
-        const r = await groq.call(prompt);
-        result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
-      }
-
-      await logUsage(modelName, result.tokensUsed, endpoint);
-      return result;
-    } catch (err: any) {
-      if (modelName.startsWith('hf/') && err.message.includes('[HF Provider Error]')) {
-        console.error(err.message);
-      } else {
-        console.error(`[Router] ${modelName} failed:`, err.message);
-      }
-      continue;
-    }
-  }
-
-  await notifyTelegram('🚨 *All AI models exhausted!* Unable to qualify jobs today.');
-  throw new AllModelsExhaustedError();
+  const result = await litellm.call('backup-agent', prompt);
+  await logUsage(result.modelUsed, result.tokensUsed, endpoint);
+  return { response: result.text, modelUsed: result.modelUsed, tokensUsed: result.tokensUsed };
 }
 
 export async function callProposalAI(prompt: string, systemPrompt?: string): Promise<RouterResult | null> {
-  for (const modelName of PROPOSAL_CHAIN) {
-    const available = await isModelAvailable(modelName);
-    if (!available) {
-      console.log(`[Router] ${modelName} quota exhausted, trying next...`);
-      continue;
-    }
-
-    try {
-      let result: RouterResult;
-
-      if (modelName.startsWith('gemini') || modelName.startsWith('gemma')) {
-        const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
-        const r = await gemini.call(modelName, fullPrompt);
-        result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
-      } else if (modelName.startsWith('cloudflare/')) {
-        const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
-        const r = await cloudflareAI.call(fullPrompt);
-        result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
-      } else if (modelName.startsWith('hf/')) {
-        const cleanModelName = modelName.replace('hf/', '');
-        const r = await huggingface.call(cleanModelName, prompt, systemPrompt);
-        result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
-      } else {
-        const r = await groq.call(prompt, systemPrompt);
-        result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
-      }
-
-      await logUsage(modelName, result.tokensUsed, 'propose');
-      return result;
-    } catch (err: any) {
-      if (modelName.startsWith('hf/') && err.message.includes('[HF Provider Error]')) {
-        console.error(err.message);
-      } else {
-        console.error(`[Router] ${modelName} failed:`, err.message);
-      }
-      continue;
-    }
+  try {
+    const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+    const result = await litellm.call('proposal-generator', fullPrompt);
+    await logUsage(result.modelUsed, result.tokensUsed, 'propose');
+    return { response: result.text, modelUsed: result.modelUsed, tokensUsed: result.tokensUsed };
+  } catch (err: any) {
+    console.error(`[Router] Proposal generation failed: ${err.message}`);
+    return null;
   }
-
-  await notifyTelegram('⚠️ *Proposal AI quota exhausted today* — proposals will be deferred.');
-  return null;
 }
 
 export async function getRemainingQuota(): Promise<Record<string, number>> {
   const result: Record<string, number> = {};
-  for (const model of [...QUALIFY_CHAIN, ...PROPOSAL_CHAIN]) {
-    const available = await isModelAvailable(model);
-    result[model] = available ? 1 : 0;
+  for (const [, alias] of Object.entries(ALIASES)) {
+    for (const model of alias.models) {
+      const available = await isModelAvailable(model);
+      result[model] = available ? 1 : 0;
+    }
   }
   return result;
 }

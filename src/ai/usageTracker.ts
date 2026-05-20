@@ -5,11 +5,16 @@ const MODEL_LIMITS: Record<string, number> = {
   'gemma-4-26b-a4b-it': 1500,
   'gemini-2.5-flash': 20,
   'gemini-2.0-flash': 0,
-  'groq/llama-3-70b': 999999,
   'gemini-2.5-pro': 25,
+  'groq/llama-3-70b': 999999,
+  'groq/llama3-8b-8192': 999999,
+  'groq/llama-3.3-70b-versatile': 999999,
   'hf/meta-llama/Llama-3.3-70B-Instruct': 500,
   'hf/deepseek-ai/DeepSeek-V3': 500,
   'hf/facebook/opt-125m': 500,
+  'cloudflare/@cf/meta/llama-3.1-8b-instruct': 10000,
+  'cloudflare/@cf/meta/llama-3.3-70b-instruct': 10000,
+  'deepseek/deepseek-chat': 500,
 };
 
 
@@ -97,8 +102,15 @@ export async function getUsageSummaryMessage(): Promise<string> {
     'gemma-4-26b-a4b-it': 'Gemma 4 26B',
     'gemini-2.5-flash': 'Gemini 2.5 Flash',
     'gemini-2.0-flash': 'Gemini 2.0 Flash',
-    'groq/llama-3-70b': 'Groq Llama-3',
     'gemini-2.5-pro': 'Gemini 2.5 Pro',
+    'groq/llama-3-70b': 'Groq Llama-3',
+    'groq/llama3-8b-8192': 'Groq Llama-3 8B',
+    'groq/llama-3.3-70b-versatile': 'Groq Llama-3.3 70B',
+    'hf/meta-llama/Llama-3.3-70B-Instruct': 'HF Llama-3.3',
+    'hf/deepseek-ai/DeepSeek-V3': 'HF DeepSeek V3',
+    'cloudflare/@cf/meta/llama-3.1-8b-instruct': 'CF Llama-3.1 8B',
+    'cloudflare/@cf/meta/llama-3.3-70b-instruct': 'CF Llama-3.3 70B',
+    'deepseek/deepseek-chat': 'DeepSeek Chat',
   };
 
   const lines = ['📊 *تقرير استهلاك AI اليوم:*', ''];
