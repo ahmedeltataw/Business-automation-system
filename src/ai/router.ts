@@ -149,7 +149,7 @@ Description: "${description.trim()}"${metaBlock}
 
 Apply the scoring criteria strictly. Return valid JSON only.`;
 
-    const result = await litellm.callWithSchema('lead-scorer', prompt, SYSTEM_INSTRUCTION, SCHEMA);
+    const result = await litellm.callWithSchema('free-lead-scorer', prompt, SYSTEM_INSTRUCTION, SCHEMA);
     await logUsage(result.modelUsed, result.tokensUsed, 'qualify');
 
     const jsonText = extractJson(result.text);
@@ -163,7 +163,7 @@ export async function callAI(
   prompt: string,
   endpoint: Exclude<AIEndpoint, 'propose'>
 ): Promise<RouterResult> {
-  const result = await litellm.call('backup-agent', prompt);
+    const result = await litellm.call('free-backup-agent', prompt);
   await logUsage(result.modelUsed, result.tokensUsed, endpoint);
   return { response: result.text, modelUsed: result.modelUsed, tokensUsed: result.tokensUsed };
 }
@@ -171,7 +171,7 @@ export async function callAI(
 export async function callProposalAI(prompt: string, systemPrompt?: string): Promise<RouterResult | null> {
   try {
     const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
-    const result = await litellm.call('proposal-generator', fullPrompt);
+    const result = await litellm.call('free-proposal-generator', fullPrompt);
     await logUsage(result.modelUsed, result.tokensUsed, 'propose');
     return { response: result.text, modelUsed: result.modelUsed, tokensUsed: result.tokensUsed };
   } catch (err: any) {

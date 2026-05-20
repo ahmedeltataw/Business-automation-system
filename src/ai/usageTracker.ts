@@ -6,6 +6,7 @@ const MODEL_LIMITS: Record<string, number> = {
   'gemini-2.5-flash': 20,
   'gemini-2.0-flash': 0,
   'gemini-2.5-pro': 25,
+  'gemini-1.5-flash': 1500,
   'groq/llama-3-70b': 999999,
   'groq/llama3-8b-8192': 999999,
   'groq/llama-3.3-70b-versatile': 999999,
@@ -15,6 +16,9 @@ const MODEL_LIMITS: Record<string, number> = {
   'cloudflare/@cf/meta/llama-3.1-8b-instruct': 10000,
   'cloudflare/@cf/meta/llama-3.3-70b-instruct': 10000,
   'deepseek/deepseek-chat': 500,
+  'openrouter/google/gemma-2-9b-it:free': 999999,
+  'openrouter/meta-llama/llama-3-8b-instruct:free': 999999,
+  'openrouter/google/gemini-flash-1.5': 999999,
 };
 
 
@@ -103,14 +107,18 @@ export async function getUsageSummaryMessage(): Promise<string> {
     'gemini-2.5-flash': 'Gemini 2.5 Flash',
     'gemini-2.0-flash': 'Gemini 2.0 Flash',
     'gemini-2.5-pro': 'Gemini 2.5 Pro',
+    'gemini-1.5-flash': 'Gemini 1.5 Flash (Free)',
     'groq/llama-3-70b': 'Groq Llama-3',
-    'groq/llama3-8b-8192': 'Groq Llama-3 8B',
-    'groq/llama-3.3-70b-versatile': 'Groq Llama-3.3 70B',
+    'groq/llama3-8b-8192': 'Groq Llama-3 8B (Free)',
+    'groq/llama-3.3-70b-versatile': 'Groq Llama-3.3 70B (Free)',
     'hf/meta-llama/Llama-3.3-70B-Instruct': 'HF Llama-3.3',
     'hf/deepseek-ai/DeepSeek-V3': 'HF DeepSeek V3',
-    'cloudflare/@cf/meta/llama-3.1-8b-instruct': 'CF Llama-3.1 8B',
-    'cloudflare/@cf/meta/llama-3.3-70b-instruct': 'CF Llama-3.3 70B',
+    'cloudflare/@cf/meta/llama-3.1-8b-instruct': 'CF Llama-3.1 8B (Free)',
+    'cloudflare/@cf/meta/llama-3.3-70b-instruct': 'CF Llama-3.3 70B (Free)',
     'deepseek/deepseek-chat': 'DeepSeek Chat',
+    'openrouter/google/gemma-2-9b-it:free': 'OR Gemma 2 9B (Free)',
+    'openrouter/meta-llama/llama-3-8b-instruct:free': 'OR Llama-3 8B (Free)',
+    'openrouter/google/gemini-flash-1.5': 'OR Gemini Flash 1.5',
   };
 
   const lines = ['📊 *تقرير استهلاك AI اليوم:*', ''];

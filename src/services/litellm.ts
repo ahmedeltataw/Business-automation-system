@@ -12,6 +12,40 @@ export interface ModelAlias {
 }
 
 const ALIASES: Record<string, ModelAlias> = {
+  'free-lead-scorer': {
+    name: 'free-lead-scorer',
+    models: [
+      'gemini-1.5-flash',
+      'gemini-1.5-flash:key2',
+      'groq/llama3-8b-8192',
+      'groq/llama3-8b-8192:key2',
+      'cloudflare/@cf/meta/llama-3.1-8b-instruct',
+      'openrouter/google/gemma-2-9b-it:free',
+      'openrouter/meta-llama/llama-3-8b-instruct:free',
+    ],
+  },
+  'free-proposal-generator': {
+    name: 'free-proposal-generator',
+    models: [
+      'gemini-1.5-flash',
+      'gemini-1.5-flash:key2',
+      'openrouter/google/gemini-flash-1.5',
+      'groq/llama-3.3-70b-versatile',
+      'groq/llama-3.3-70b-versatile:key2',
+      'cloudflare/@cf/meta/llama-3.3-70b-instruct',
+    ],
+  },
+  'free-backup-agent': {
+    name: 'free-backup-agent',
+    models: [
+      'gemini-1.5-flash',
+      'gemini-1.5-flash:key2',
+      'groq/llama3-8b-8192',
+      'groq/llama3-8b-8192:key2',
+      'openrouter/google/gemma-2-9b-it:free',
+      'hf/meta-llama/Llama-3.3-70B-Instruct',
+    ],
+  },
   'lead-scorer': {
     name: 'lead-scorer',
     models: [
@@ -149,7 +183,7 @@ class LiteLLMGateway {
     if (model.startsWith('gemini') || model.startsWith('gemma')) {
       return this.callGemini(model, messages, schema, startTime);
     }
-    if (model.startsWith('groq/') || model === 'groq/llama3-8b-8192' || model === 'groq/llama-3.3-70b-versatile') {
+    if (model.startsWith('groq/')) {
       return this.callGroq(model, messages, startTime);
     }
     if (model.startsWith('deepseek/')) {
@@ -157,6 +191,9 @@ class LiteLLMGateway {
     }
     if (model.startsWith('hf/')) {
       return this.callHuggingFace(model, messages, startTime);
+    }
+    if (model.startsWith('openrouter/')) {
+      return this.callOpenRouter(model, messages, startTime);
     }
 
     throw new Error(`LiteLLM: unsupported provider prefix for model "${model}"`);
@@ -218,7 +255,12 @@ class LiteLLMGateway {
     startTime: number
   ): Promise<AIResponse> {
     const { GoogleGenAI } = await import('@google/genai');
-    const client = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+    const useKey2 = model.endsWith(':key2');
+    const apiKey = useKey2 ? env.GEMINI_API_KEY_2 : env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error(`Gemini: missing ${useKey2 ? 'GEMINI_API_KEY_2' : 'GEMINI_API_KEY'}`);
+
+    const modelName = model.replace(':key2', '');
+    const client = new GoogleGenAI({ apiKey });
 
     const userContent = messages.find(m => m.role === 'user')?.content ?? '';
     const systemContent = messages.find(m => m.role === 'system')?.content;
@@ -235,7 +277,7 @@ class LiteLLMGateway {
 
     try {
       const response = await client.models.generateContent({
-        model,
+        model: modelName,
         contents: userContent,
         config,
       });
@@ -245,9 +287,9 @@ class LiteLLMGateway {
       const text = response.text?.trim() ?? '';
       const tokens = response.usageMetadata?.totalTokenCount ?? 0;
       const duration = Date.now() - startTime;
-      console.log(`[LiteLLM] ${model} | ${tokens} tokens | ${duration}ms`);
+      console.log(`[LiteLLM] ${modelName} | ${tokens} tokens | ${duration}ms`);
 
-      return { text, tokensUsed: tokens, modelUsed: model };
+      return { text, tokensUsed: tokens, modelUsed: modelName };
     } catch (err: any) {
       clearTimeout(timeout);
       throw err;
@@ -260,10 +302,11 @@ class LiteLLMGateway {
     startTime: number
   ): Promise<AIResponse> {
     const { Groq } = await import('groq-sdk');
-    const apiKey = env.GROQ_API_KEY || env.GROQ_API_KEY_2;
-    if (!apiKey) throw new Error('Groq: missing GROQ_API_KEY');
+    const useKey2 = model.endsWith(':key2');
+    const apiKey = useKey2 ? env.GROQ_API_KEY_2 : env.GROQ_API_KEY;
+    if (!apiKey) throw new Error(`Groq: missing ${useKey2 ? 'GROQ_API_KEY_2' : 'GROQ_API_KEY'}`);
 
-    const modelName = model.replace('groq/', '');
+    const modelName = model.replace(':key2', '').replace('groq/', '');
     const client = new Groq({ apiKey });
 
     const controller = new AbortController();
@@ -380,6 +423,55 @@ class LiteLLMGateway {
       console.log(`[LiteLLM] hf/${modelName} | ${tokens} tokens | ${duration}ms`);
 
       return { text, tokensUsed: tokens, modelUsed: `hf/${modelName}` };
+    } catch (err: any) {
+      clearTimeout(timeout);
+      throw err;
+    }
+  }
+
+  private async callOpenRouter(
+    model: string,
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+    startTime: number
+  ): Promise<AIResponse> {
+    const apiKey = env.OPENROUTER_API_KEY;
+    if (!apiKey) throw new Error('OpenRouter: missing OPENROUTER_API_KEY');
+
+    const modelName = model.replace('openrouter/', '');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://github.com/ahmedeltataw/Business-automation-system',
+          'X-Title': 'Freelance Sales Automation',
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages,
+          max_tokens: 2000,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errBody = await response.text().catch(() => '');
+        throw new Error(`HTTP ${response.status}: ${errBody.slice(0, 200)}`);
+      }
+
+      const data: any = await response.json();
+      const text = data.choices?.[0]?.message?.content?.trim() ?? '';
+      const tokens = data.usage?.total_tokens ?? 0;
+      const duration = Date.now() - startTime;
+      console.log(`[LiteLLM] openrouter/${modelName} | ${tokens} tokens | ${duration}ms`);
+
+      return { text, tokensUsed: tokens, modelUsed: `openrouter/${modelName}` };
     } catch (err: any) {
       clearTimeout(timeout);
       throw err;

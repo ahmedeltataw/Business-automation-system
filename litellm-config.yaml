@@ -1,9 +1,88 @@
-# LiteLLM Configuration — Unified AI Gateway
-# Model aliases map functional names to provider-specific models.
-# The router automatically fallsbs through the alias chain on rate limits or errors.
+# LiteLLM Configuration — FREE-TIER Optimized AI Gateway
+# All models below use FREE tiers from Google AI Studio, Groq, Cloudflare, OpenRouter, and Hugging Face.
+# The router automatically falls back between free providers on rate limits.
 
 model_list:
-  # Lead Scorer — fast, cheap inference for job qualification
+  # === FREE Lead Scorer — fast, free inference for job qualification ===
+  - model_name: free-lead-scorer
+    litellm_params:
+      model: gemini/gemini-1.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+    fallbacks:
+      # Gemini Key 2 rotation
+      - litellm_params:
+          model: gemini/gemini-1.5-flash
+          api_key: os.environ/GEMINI_API_KEY_2
+      # Groq free tier (10k req/day per key)
+      - litellm_params:
+          model: groq/llama3-8b-8192
+          api_key: os.environ/GROQ_API_KEY
+      - litellm_params:
+          model: groq/llama3-8b-8192
+          api_key: os.environ/GROQ_API_KEY_2
+      # Cloudflare Workers AI (10k req/day free)
+      - litellm_params:
+          model: cloudflare/@cf/meta/llama-3.1-8b-instruct
+          api_base: https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run
+          api_key: os.environ/CLOUDFLARE_API_TOKEN
+      # OpenRouter free models
+      - litellm_params:
+          model: openrouter/google/gemma-2-9b-it:free
+          api_key: os.environ/OPENROUTER_API_KEY
+      - litellm_params:
+          model: openrouter/meta-llama/llama-3-8b-instruct:free
+          api_key: os.environ/OPENROUTER_API_KEY
+
+  # === FREE Proposal Generator — smart free models for Arabic proposals ===
+  - model_name: free-proposal-generator
+    litellm_params:
+      model: gemini/gemini-1.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+    fallbacks:
+      # Gemini Key 2 rotation
+      - litellm_params:
+          model: gemini/gemini-1.5-flash
+          api_key: os.environ/GEMINI_API_KEY_2
+      # OpenRouter free Gemini
+      - litellm_params:
+          model: openrouter/google/gemini-flash-1.5
+          api_key: os.environ/OPENROUTER_API_KEY
+      # Groq free tier
+      - litellm_params:
+          model: groq/llama-3.3-70b-versatile
+          api_key: os.environ/GROQ_API_KEY
+      - litellm_params:
+          model: groq/llama-3.3-70b-versatile
+          api_key: os.environ/GROQ_API_KEY_2
+      # Cloudflare 70B model
+      - litellm_params:
+          model: cloudflare/@cf/meta/llama-3.3-70b-instruct
+          api_base: https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run
+          api_key: os.environ/CLOUDFLARE_API_TOKEN
+
+  # === FREE Backup Agent — resilient free fallback chain ===
+  - model_name: free-backup-agent
+    litellm_params:
+      model: gemini/gemini-1.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+    fallbacks:
+      - litellm_params:
+          model: gemini/gemini-1.5-flash
+          api_key: os.environ/GEMINI_API_KEY_2
+      - litellm_params:
+          model: groq/llama3-8b-8192
+          api_key: os.environ/GROQ_API_KEY
+      - litellm_params:
+          model: groq/llama3-8b-8192
+          api_key: os.environ/GROQ_API_KEY_2
+      - litellm_params:
+          model: openrouter/google/gemma-2-9b-it:free
+          api_key: os.environ/OPENROUTER_API_KEY
+      - litellm_params:
+          model: hf/meta-llama/Llama-3.3-70B-Instruct
+          api_key: os.environ/HF_TOKEN
+
+  # === Legacy aliases (backward compat) ===
   - model_name: lead-scorer
     litellm_params:
       model: cloudflare/@cf/meta/llama-3.1-8b-instruct
@@ -17,7 +96,6 @@ model_list:
           model: groq/llama3-8b-8192
           api_key: os.environ/GROQ_API_KEY
 
-  # Proposal Generator — advanced reasoning for Arabic proposal writing
   - model_name: proposal-generator
     litellm_params:
       model: deepseek/deepseek-chat
@@ -31,7 +109,6 @@ model_list:
           api_base: https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run
           api_key: os.environ/CLOUDFLARE_API_TOKEN
 
-  # Backup Agent — resilient fallback when primaries are rate-limited
   - model_name: backup-agent
     litellm_params:
       model: gemini/gemini-2.5-flash
@@ -46,13 +123,8 @@ model_list:
 
 # Global router settings
 router_settings:
-  # Automatic fallback: try next model in alias chain on 429/5xx
   routing_strategy: simple-shuffle
-  # Max retries per request before giving up
   num_retries: 3
-  # Cooldown period (seconds) for rate-limited models
   cooldown_time: 60
-  # Enable context window fallback (retry with shorter prompt)
   enable_context_fallback: true
-  # Timeout per request (seconds)
   timeout: 30

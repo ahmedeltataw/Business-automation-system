@@ -8,6 +8,7 @@ interface EnvConfig {
   SUPABASE_SERVICE_ROLE_KEY: string;
   REDIS_URL: string;
   GEMINI_API_KEY: string;
+  GEMINI_API_KEY_2: string;
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_CHAT_ID: string;
   GROQ_API_KEY: string;
@@ -16,6 +17,7 @@ interface EnvConfig {
   CLOUDFLARE_ACCOUNT_ID: string;
   CLOUDFLARE_API_TOKEN: string;
   DEEPSEEK_API_KEY: string;
+  OPENROUTER_API_KEY: string;
 }
 
 function ensure(key: string): string {
@@ -34,6 +36,7 @@ function loadEnv(): EnvConfig {
     SUPABASE_SERVICE_ROLE_KEY: ensure('SUPABASE_SERVICE_ROLE_KEY'),
     REDIS_URL: ensure('REDIS_URL'),
     GEMINI_API_KEY: ensure('GEMINI_API_KEY'),
+    GEMINI_API_KEY_2: optional('GEMINI_API_KEY_2'),
     TELEGRAM_BOT_TOKEN: ensure('TELEGRAM_BOT_TOKEN'),
     TELEGRAM_CHAT_ID: ensure('TELEGRAM_CHAT_ID'),
     GROQ_API_KEY: ensure('GROQ_API_KEY'),
@@ -42,6 +45,7 @@ function loadEnv(): EnvConfig {
     CLOUDFLARE_ACCOUNT_ID: optional('CLOUDFLARE_ACCOUNT_ID'),
     CLOUDFLARE_API_TOKEN: optional('CLOUDFLARE_API_TOKEN'),
     DEEPSEEK_API_KEY: optional('DEEPSEEK_API_KEY'),
+    OPENROUTER_API_KEY: optional('OPENROUTER_API_KEY'),
   };
 }
 
