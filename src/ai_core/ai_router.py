@@ -5,29 +5,36 @@ from pydantic import BaseModel
 from litellm import completion
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+# Load .env only if not already loaded (engine.py loads first)
+if not os.environ.get('GEMINI_API_KEY'):
+    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+    # Strip BOM from env vars (Windows UTF-8 BOM issue)
+    for key in list(os.environ.keys()):
+        if key.startswith('\ufeff'):
+            clean_key = key.replace('\ufeff', '')
+            os.environ[clean_key] = os.environ.pop(key)
 
 T = TypeVar('T', bound=BaseModel)
 
 ALIASES = {
     'free-lead-scorer': [
-        'gemini-2.0-flash',
+        'gemini/gemini-2.0-flash',
         'groq/llama-3.1-8b-instant',
         'openrouter/google/gemma-4-26b-a4b-it:free',
         'openrouter/meta-llama/llama-3.3-70b-instruct:free',
     ],
     'free-proposal-generator': [
-        'gemini-2.0-flash',
+        'gemini/gemini-2.0-flash',
         'openrouter/google/gemma-4-31b-it:free',
         'openrouter/deepseek/deepseek-v4-flash:free',
         'groq/llama-3.3-70b-versatile',
         'cloudflare/@cf/meta/llama-3.3-70b-instruct',
     ],
     'free-backup-agent': [
-        'gemini-2.0-flash',
+        'gemini/gemini-2.0-flash',
         'groq/llama-3.1-8b-instant',
         'openrouter/google/gemma-4-26b-a4b-it:free',
-        'hf/meta-llama/Llama-3.3-70B-Instruct',
+        'huggingface/meta-llama/Llama-3.3-70B-Instruct',
     ],
 }
 
@@ -56,7 +63,7 @@ def _set_cooldown(model: str):
 
 def _get_api_key(model: str) -> str | None:
     base = model.split(':')[0].split('/')[-1]
-    if 'gemini' in model.lower() or 'gemma' in model.lower():
+    if model.startswith('gemini/') or 'gemini' in model.lower() or 'gemma' in model.lower():
         return os.environ.get('GEMINI_API_KEY')
     if model.startswith('groq/'):
         return os.environ.get('GROQ_API_KEY')
@@ -64,7 +71,7 @@ def _get_api_key(model: str) -> str | None:
         return os.environ.get('OPENROUTER_API_KEY')
     if model.startswith('cloudflare/'):
         return os.environ.get('CLOUDFLARE_API_TOKEN')
-    if model.startswith('hf/'):
+    if model.startswith('huggingface/') or model.startswith('hf/'):
         return os.environ.get('HF_TOKEN')
     return None
 
@@ -139,12 +146,16 @@ def call(alias: str, prompt: str, system_prompt: str = '', response_model: Type[
             except Exception as e:
                 last_error = e
                 msg = str(e).lower()
+                err_type = type(e).__name__.lower()
+                # Don't retry Pydantic/validation errors — they're not API issues
+                if 'validation' in err_type or 'pydantic' in err_type:
+                    raise
                 if '429' in msg or 'rate limit' in msg or 'resource_exhausted' in msg or 'quota' in msg:
                     print(f'[LiteLLM] {model} rate limited, entering cooldown')
                     _set_cooldown(model)
                     continue
-                if 'missing' in msg or 'not set' in msg or 'not configured' in msg:
-                    print(f'[LiteLLM] {model} skipped (key not configured), trying next')
+                if 'api key' in msg or 'apikey' in msg or 'api_key' in msg or 'authentication' in msg or 'authorization' in msg:
+                    print(f'[LiteLLM] {model} skipped (auth error), trying next')
                     continue
                 print(f'[LiteLLM] {model} failed: {e}')
                 break

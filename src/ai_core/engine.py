@@ -2,7 +2,13 @@ import os
 import sys
 import json
 import time
+import io
 from datetime import datetime, timezone
+
+# Fix Windows console encoding for Arabic text
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -10,11 +16,17 @@ from pydantic import ValidationError
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
+# Strip BOM from env vars (Windows UTF-8 BOM issue)
+for key in list(os.environ.keys()):
+    if key.startswith('\ufeff'):
+        clean_key = key.replace('\ufeff', '')
+        os.environ[clean_key] = os.environ.pop(key)
+
 from ai_router import call
 from schemas import LeadScoreResult, ProposalResult, JobRecord
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
-SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
+SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     print('[ERROR] Missing SUPABASE_URL or SUPABASE_SERVICE_KEY')
@@ -25,13 +37,15 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 SYSTEM_SCORER = (
     'You are a freelance job analyzer for an Arabic freelancing agency. '
     'Score jobs 0-5 based on relevance, budget clarity, and client quality. '
-    'Respond with valid JSON only.'
+    'Respond with valid JSON ONLY, using exactly these fields: '
+    '{"score": <float 0-5>, "is_relevant": <bool>, "project_type": "<string>", "tech_stack": ["<string>", ...], "reasoning": "<string>"}'
 )
 
 SYSTEM_PROPOSAL = (
     'You are a professional proposal writer for an Arabic freelancing agency. '
     'Write a compelling, tailored proposal in Arabic that addresses the client needs directly. '
-    'Respond with valid JSON only.'
+    'Respond with valid JSON ONLY, using exactly these fields: '
+    '{"proposal": "<Arabic text>", "highlights": ["<string>", ...], "estimated_budget": "<string or null>"}'
 )
 
 
@@ -39,8 +53,7 @@ def fetch_pending_jobs(limit: int = 10) -> list[dict]:
     response = (
         supabase.table('scraped_jobs')
         .select('*')
-        .is_('ai_lead_score_warning', 'true')
-        .or_(f'ai_lead_score.is.null,ai_lead_score.eq.0')
+        .eq('ai_lead_score_warning', 'true')
         .order('created_at', desc=True)
         .limit(limit)
         .execute()
@@ -48,35 +61,36 @@ def fetch_pending_jobs(limit: int = 10) -> list[dict]:
     return response.data or []
 
 
-def mark_processing(job_id: int):
+def mark_processing(job_id: str):
     supabase.table('scraped_jobs').update({
         'ai_lead_score_warning': False,
         'updated_at': datetime.now(timezone.utc).isoformat(),
     }).eq('id', job_id).execute()
 
 
-def update_job_score(job_id: int, score_result: LeadScoreResult):
+def update_job_score(job_id: str, score_result: LeadScoreResult):
     supabase.table('scraped_jobs').update({
-        'ai_lead_score': score_result.score,
+        'ai_score': int(score_result.score),
         'ai_project_type': score_result.project_type,
         'ai_tech_stack': json.dumps(score_result.tech_stack),
-        'ai_scoring_reason': score_result.reasoning or '',
-        'is_relevant': score_result.is_relevant,
+        'ai_summary_ar': score_result.reasoning or '',
+        'ai_is_relevant': score_result.is_relevant,
+        'ai_analyzed_at': datetime.now(timezone.utc).isoformat(),
         'updated_at': datetime.now(timezone.utc).isoformat(),
     }).eq('id', job_id).execute()
 
 
-def update_proposal(job_id: int, proposal_result: ProposalResult):
+def update_proposal(job_id: str, proposal_result: ProposalResult):
     supabase.table('scraped_jobs').update({
-        'ai_proposal': proposal_result.proposal,
-        'ai_proposal_highlights': json.dumps(proposal_result.highlights),
-        'ai_estimated_budget': proposal_result.estimated_budget,
+        'ai_proposal_text': proposal_result.proposal,
+        'ai_estimated_effort': json.dumps(proposal_result.highlights),
+        'ai_proposal_generated_at': datetime.now(timezone.utc).isoformat(),
         'updated_at': datetime.now(timezone.utc).isoformat(),
     }).eq('id', job_id).execute()
 
 
 def process_job(job: dict) -> dict:
-    job_id = job['id']
+    job_id = str(job['id'])
     title = (job.get('title') or '')[:150]
     description = (job.get('description') or '')[:2000]
     platform = job.get('platform', 'unknown')
