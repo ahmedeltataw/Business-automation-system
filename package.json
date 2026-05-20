@@ -12,11 +12,13 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@octokit/action": "^8.0.4",
     "@supabase/supabase-js": "^2.106.0",
     "dotenv": "^17.4.2",
     "grammy": "^1.43.0",
     "groq-sdk": "^1.2.0",
     "ioredis": "^5.10.1",
+    "libsodium-wrappers": "^0.8.4",
     "node-cron": "^4.2.1",
     "pg": "^8.21.0",
     "playwright": "^1.60.0",
@@ -29,6 +31,8 @@
     "@types/pg": "^8.20.0",
     "nodemon": "^3.1.0",
     "ts-node": "^10.9.2",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1",
     "typescript": "^6.0.3"
   }
 }
