@@ -13,6 +13,8 @@ interface EnvConfig {
   GROQ_API_KEY: string;
   GROQ_API_KEY_2: string;
   HF_TOKEN: string;
+  CLOUDFLARE_ACCOUNT_ID: string;
+  CLOUDFLARE_API_TOKEN: string;
 }
 
 function ensure(key: string): string {
@@ -36,6 +38,8 @@ function loadEnv(): EnvConfig {
     GROQ_API_KEY: ensure('GROQ_API_KEY'),
     GROQ_API_KEY_2: optional('GROQ_API_KEY_2'),
     HF_TOKEN: optional('HF_TOKEN'),
+    CLOUDFLARE_ACCOUNT_ID: optional('CLOUDFLARE_ACCOUNT_ID'),
+    CLOUDFLARE_API_TOKEN: optional('CLOUDFLARE_API_TOKEN'),
   };
 }
 

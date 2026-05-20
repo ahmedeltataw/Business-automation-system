@@ -65,8 +65,8 @@ export async function scrapeMostaql(): Promise<MostaqlProject[]> {
         const href = titleLink?.getAttribute('href') ?? '';
 
         items.push({
-          title: titleLink?.textContent?.trim() ?? '',
-          description: descLink?.textContent?.trim() ?? '',
+          title: (titleLink?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+          description: (descLink?.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 500),
           budget: budgetEl?.textContent?.trim() ?? '',
           url: href,
           client_name: clientEl?.textContent?.trim() ?? '',

@@ -162,7 +162,7 @@ export async function scrapeKhamsat(): Promise<KhamsatRequest[]> {
             }
           }
 
-          return { proposals_count: count, client_notes: authorNote };
+          return { proposals_count: count, client_notes: authorNote.replace(/\s+/g, ' ').trim().slice(0, 200) };
         });
         r.proposals_count = enriched.proposals_count;
         r.client_notes = enriched.client_notes;

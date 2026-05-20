@@ -1,0 +1,47 @@
+# LiteLLM Proxy Configuration
+# Fallback chain: Gemini 2.5 Flash -> Cloudflare Llama 3.1 8B -> Groq Llama 3 8B
+# Deploy: litellm --config litellm_config.yaml
+#
+# This config is for reference. The Node.js router implements the same
+# fallback chain natively via agentConfig.ai.qualifyChain.
+
+model_list:
+  # Primary: Gemini 2.5 Flash (free tier, generous limits)
+  - model_name: "gemini-2.5-flash"
+    litellm_params:
+      model: "gemini/gemini-2.5-flash"
+      api_key: os.environ/GEMINI_API_KEY
+
+  # Secondary: Cloudflare Workers AI (free, 10k requests/day)
+  - model_name: "cloudflare-llama"
+    litellm_params:
+      model: "openai/@cf/meta/llama-3.1-8b-instruct"
+      api_base: "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/v1"
+      api_key: os.environ/CLOUDFLARE_API_TOKEN
+
+  # Tertiary: Groq Llama 3 8B (free tier, 30 req/min)
+  - model_name: "groq-llama-8b"
+    litellm_params:
+      model: "groq/llama3-8b-8192"
+      api_key: os.environ/GROQ_API_KEY
+
+# Router configuration for automatic fallback
+router_settings:
+  models:
+    - model_name: "gemini-2.5-flash"
+      weight: 3
+    - model_name: "cloudflare-llama"
+      weight: 2
+    - model_name: "groq-llama-8b"
+      weight: 1
+
+  # Retry on these error codes
+  retry_after: 5
+  num_retries: 3
+  timeout: 30
+
+  # Fallback order: try primary, then secondary, then tertiary
+  fallbacks:
+    - "gemini-2.5-flash"
+    - "cloudflare-llama"
+    - "groq-llama-8b"

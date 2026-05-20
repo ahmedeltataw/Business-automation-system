@@ -55,9 +55,17 @@ export const agentConfig = {
       ],
       keyRotationEnabled: true,
     },
-    qualifyChain: ['groq/llama-3-70b', 'gemini-2.5-flash', 'hf/meta-llama/Llama-3.3-70B-Instruct', 'gemini-2.5-pro', 'gemma-4-31b-it'],
-    proposalChain: ['groq/llama-3-70b', 'gemini-2.5-flash', 'hf/meta-llama/Llama-3.3-70B-Instruct', 'gemini-2.5-pro', 'gemma-4-31b-it'],
+    qualifyChain: ['gemini-2.5-flash', 'cloudflare/@cf/meta/llama-3.1-8b-instruct', 'groq/llama3-8b-8192', 'hf/meta-llama/Llama-3.3-70B-Instruct', 'gemini-2.5-pro', 'gemma-4-31b-it'],
+    proposalChain: ['gemini-2.5-flash', 'cloudflare/@cf/meta/llama-3.1-8b-instruct', 'groq/llama3-8b-8192', 'hf/meta-llama/Llama-3.3-70B-Instruct', 'gemini-2.5-pro', 'gemma-4-31b-it'],
     googleFallbackModels: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemma-4-31b-it'],
+    cloudflare: {
+      timeoutMs: 30000,
+      models: [
+        '@cf/meta/llama-3.1-8b-instruct',
+        '@cf/meta/llama-3.3-70b-instruct',
+        '@cf/qwen/qwen1.5-14b-chat-awq',
+      ],
+    },
   },
 
   scoring: {

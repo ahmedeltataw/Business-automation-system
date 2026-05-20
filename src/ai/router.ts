@@ -1,6 +1,7 @@
 import { gemini } from './gemini';
 import { groq } from './groq';
 import { huggingface } from './huggingface';
+import { cloudflareAI } from './cloudflare';
 import { isModelAvailable, logUsage } from './usageTracker';
 import { notifyTelegram } from '../telegram/notifier';
 import { agentConfig } from '../config/agentConfig';
@@ -166,6 +167,9 @@ Apply the scoring criteria strictly. Return valid JSON only.`;
         if (modelName.startsWith('gemini') || modelName.startsWith('gemma')) {
           const r = await gemini.callWithSchema(modelName, prompt, SYSTEM_INSTRUCTION, SCHEMA);
           result = { text: r.text, tokensUsed: r.tokensUsed, modelUsed: r.modelUsed };
+        } else if (modelName.startsWith('cloudflare/')) {
+          const r = await cloudflareAI.callWithSchema(prompt, SYSTEM_INSTRUCTION, SCHEMA);
+          result = { text: r.text, tokensUsed: r.tokensUsed, modelUsed: r.modelUsed };
         } else if (modelName.startsWith('hf/')) {
           const cleanModelName = modelName.replace('hf/', '');
           const r = await huggingface.call(cleanModelName, prompt, SYSTEM_INSTRUCTION);
@@ -215,6 +219,9 @@ export async function callAI(
       if (modelName.startsWith('gemini') || modelName.startsWith('gemma')) {
         const r = await gemini.call(modelName, prompt);
         result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
+      } else if (modelName.startsWith('cloudflare/')) {
+        const r = await cloudflareAI.call(prompt);
+        result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
       } else if (modelName.startsWith('hf/')) {
         const cleanModelName = modelName.replace('hf/', '');
         const r = await huggingface.call(cleanModelName, prompt);
@@ -254,6 +261,10 @@ export async function callProposalAI(prompt: string, systemPrompt?: string): Pro
       if (modelName.startsWith('gemini') || modelName.startsWith('gemma')) {
         const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
         const r = await gemini.call(modelName, fullPrompt);
+        result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
+      } else if (modelName.startsWith('cloudflare/')) {
+        const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+        const r = await cloudflareAI.call(fullPrompt);
         result = { response: r.text, modelUsed: r.modelUsed, tokensUsed: r.tokensUsed };
       } else if (modelName.startsWith('hf/')) {
         const cleanModelName = modelName.replace('hf/', '');
