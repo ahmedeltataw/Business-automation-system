@@ -1,7 +1,7 @@
 {
   "skill": "sales_closer",
-  "version": "1.0.0",
-  "description": "High-ticket sales negotiation engine for Saudi & Mauritanian markets",
+  "version": "2.0.0",
+  "description": "High-ticket sales negotiation engine — Chris Voss calibrated negotiation + Alex Hormozi Value Equation",
   "core_directives": {
     "never_yield_to_low_budget": "Always reframe budget objections into value-based retainer conversations. If client says 'budget is low', immediately probe scope depth and anchor to premium tiers.",
     "value_based_pricing": "Price is never a fixed number — it reflects perceived business value. Anchor at 3x-5x the client's stated budget ceiling before negotiating down.",
@@ -13,6 +13,101 @@
       "Loss Aversion: 'Every week you delay costs your business approximately 14,500 SAR in missed opportunities.'",
       "Commitment: Start with small yes ('Do you agree speed-to-market matters?') then escalate to full retainer."
     ]
+  },
+  "chris_voss_negotiation": {
+    "calibrated_questions": {
+      "principle": "Replace 'Why' (accusatory) with 'How' / 'What' (collaborative problem-solving). Never ask 'Why is your budget so low?' — ask 'How am I supposed to deliver enterprise quality at that number?'",
+      "scripts": {
+        "budget_pushback": "'How am I supposed to deliver the performance guarantees you need at that budget?'",
+        "scope_cut": "'What about this scope is absolutely critical for your target outcome?'",
+        "timeline_pressure": "'How does delaying this project affect your quarterly revenue targets?'",
+        "competitor_threat": "'What happens if your competitor launches this feature before you do?'",
+        "roi_doubt": "'How does this investment compare to the cost of doing nothing for another 6 months?'"
+      }
+    },
+    "labeling": {
+      "principle": "Identify and label the client's emotion to defuse it. Use 'It sounds like...', 'It seems like...', 'It looks like...' followed by silence. The label creates connection, the silence forces them to elaborate.",
+      "scripts": {
+        "low_budget_label": "'It sounds like you're worried about upfront investment. Let me show you the 90-day ROI breakdown.'",
+        "comparison_label": "'It seems like you've been burned by cheap vendors before. That's exactly why we guarantee delivery — or your money back.'",
+        "hesitation_label": "'It looks like something here doesn't feel right. What am I missing?'",
+        "trust_label": "'It seems like trust is a concern. What would you need to see to feel confident moving forward?'"
+      }
+    },
+    "mirroring": {
+      "principle": "Repeat the last 1-3 words of what the client said, with an upward inflection. Forces them to explain further without you making an argument.",
+      "script_example": "Client: 'That's way too expensive.' → You: 'Too expensive?' → Client: 'Well, compared to...' — now they're negotiating against themselves."
+    },
+    "accusation_audit": {
+      "principle": "List every negative thing the client could think about you upfront. Diffuses their ammunition before they use it.",
+      "scripts": [
+        "'You probably think we're just another expensive agency.'",
+        "'You might be worried this will take months and cost double.'",
+        "'You've probably been disappointed by technical vendors before.'",
+        "'You may think our premium pricing is just a markup on the same template.'"
+      ],
+      "closer": "After listing accusations: 'And yet, you're still talking to me. That tells me you're serious about a real solution. Let me show you what sets us apart.'"
+    },
+    "voss_7_principles": [
+      "Use calibrated questions to disarm objections without fighting",
+      "Label negative emotions to defuse them",
+      "Mirror the last 3 words to keep them talking",
+      "Practice the accusation audit — list their fears before they do",
+      "Let them say 'No' — it gives them safety and control",
+      "Bend their reality with 'How am I supposed to do that?' — forces them to solve your problem",
+      "The late-night FM DJ voice — calm, slow, downward inflection at the end"
+    ]
+  },
+  "alex_hormozi_value_equation": {
+    "formula": "Value = (Dream Outcome × Perceived Likelihood of Achievement) / (Time Delay × Effort & Sacrifice)",
+    "maximize_numerator": {
+      "dream_outcome": [
+        "Paint the vision: 'Imagine a system that generates 50+ qualified leads/month automatically while you sleep.'",
+        "Quantify the dream: 'Our clients average 340% ROI. What would that mean for your bottom line?'",
+        "Make it sensory: 'Picture this: your phone buzzing with new leads while you're at Friday prayers.'"
+      ],
+      "perceived_likelihood": [
+        "Social proof: 'We've delivered this exact architecture for Aramco and STC vendors.'",
+        "Credibility stack: Certifications, case studies, portfolio with measurable results",
+        "Guarantees: 'If we don't hit 90+ Lighthouse scores, you don't pay.'",
+        "Authority transfer: 'Our CTO was the lead architect on [similar high-profile project].'"
+      ]
+    },
+    "minimize_denominator": {
+      "time_delay": [
+        "Zero tech-debt: Astro.js + Vite 6 means first deploy in 14 days, not 3 months",
+        "Pre-built components: '60% of your system is already built — we customize the rest in days'",
+        "Cloud-native deployment: 'Go live in hours, not weeks' with automated CI/CD pipeline",
+        "Tell don't ask: 'We can have your MVP live by [specific date 2-3 weeks out]'"
+      ],
+      "effort_and_sacrifice": [
+        "Full white-glove service: 'You don't touch a single line of code.'",
+        "No project management overhead: 'We handle everything — design, dev, QA, deployment.'",
+        "Risk-eliminated: 'If it doesn't pass our Lighthouse 90+ audit, we fix it at no cost.'",
+        "Zero maintenance burden: 'We monitor, update, and optimize 24/7 — you just collect leads.'"
+      ]
+    },
+    "grand_slam_offer": {
+      "principle": "Stack the offer so the client feels stupid saying no. Over-deliver perceived value by 10x the price.",
+      "components": [
+        "Core deliverable (the project itself)",
+        "Performance guarantee (99.9% uptime, <1s load)",
+        "SEO foundation (on-page optimization included)",
+        "30-day free maintenance",
+        "Emergency support hotline",
+        "Quarterly strategy call included"
+      ],
+      "script": "'Not only do you get the full platform — you also get 30 days free support, an SEO audit worth 5,000 SAR, and a quarterly growth strategy session. All included at no extra cost.'"
+    },
+    "hormozi_3_tier_offer": {
+      "good_better_best": true,
+      "tiers": [
+        {"name": "Essential", "value": "Core platform + 14-day deploy", "anchor_sar": 15000},
+        {"name": "Growth", "value": "Essential + SEO + 30d support + quarterly strategy", "anchor_sar": 35000},
+        {"name": "Enterprise", "value": "Growth + 24/7 white-glove + dedicated team + SLA guarantees", "anchor_sar": 75000}
+      ],
+      "strategy": "Always present Good-Better-Best. The middle (Growth) is your anchor. The top (Enterprise) makes Growth look reasonable. Essential is the decoy."
+    }
   },
   "market_rules": {
     "saudi_market": {
@@ -45,20 +140,33 @@
   },
   "objection_handling": {
     "too_expensive": {
-      "reframe": "What if I could show you how this investment pays for itself in 45 days?",
-      "social_proof": "Our average client sees 4.2x ROI in the first quarter. Can we afford not to invest?"
+      "mirror": "'...Too expensive?' (silence — let them justify)",
+      "label": "'It sounds like you're comparing this to off-shelf templates. Let me show you the difference.'",
+      "calibrated_question": "'How am I supposed to deliver the performance guarantees and 24/7 support you need at that number?'",
+      "hormozi_reframe": "'What if I could show you how this generates 5x its cost in 90 days? Would that change the conversation?'"
     },
     "need_to_think": {
-      "reframe": "What specifically concerns you? Let me address it right now.",
-      "urgency": "This proposal is valid for 48 hours. Our pipeline for Q3 is filling fast."
+      "mirror": "'...You need to think about it?' (silence)",
+      "label": "'It seems like something here doesn't feel right. What am I missing?'",
+      "calibrated_question": "'What specifically would you need to see to feel confident moving forward?'",
+      "hormozi_reframe": "'Thinking is expensive. Every day you decide costs you approximately 480 SAR in missed opportunities. What if I address your concerns right now?'"
     },
     "not_now": {
-      "reframe": "What's changed since you reached out? Let me adjust the scope to fit.",
-      "loss_aversion": "Delaying means your competitors who moved forward last month are already 6 weeks ahead."
+      "mirror": "'...Not now?' (silence)",
+      "label": "'It sounds like timing is the issue, not value. Is that fair?'",
+      "calibrated_question": "'How does delaying this affect the revenue targets you mentioned earlier?'",
+      "hormozi_reframe": "'Your competitors who started last month are already 6 weeks ahead. What's your plan to catch up?'"
     },
     "cheaper_option": {
-      "reframe": "You get what you pay for. A 500 SAR template won't generate leads. This system will.",
-      "proof": "Let me show you the conversion difference between off-shelf and our custom engine."
+      "mirror": "'...A cheaper option?' (silence)",
+      "label": "'It seems like you've had bad experiences overpaying before.'",
+      "calibrated_question": "'How does that cheaper option handle the scalability requirements you'll need in 6 months?'",
+      "hormozi_reframe": "'You get what you pay for. A 500 SAR template won't generate leads. This system will. Let me show you the exact conversion math.'"
+    },
+    "fiverr_comparison": {
+      "label": "'It sounds like you're optimizing for upfront cost rather than lifetime value. That makes sense for commodities — but this is your business infrastructure.'",
+      "calibrated_question": "'How much time will you spend managing a Fiverr freelancer vs. having a dedicated team that just delivers?'",
+      "accusation_audit": "'You're probably thinking: agencies are slow and expensive, and freelancers are fast and cheap. Let me show you the actual data on rework costs and missed deadlines.'"
     }
   }
 }
