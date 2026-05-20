@@ -1,4 +1,11 @@
-﻿import dotenv from 'dotenv';
+﻿/**
+ * Environment Configuration
+ *
+ * Loads and validates all required environment variables from .env.
+ * Throws on missing required keys; optional keys receive empty-string defaults.
+ */
+
+import dotenv from 'dotenv';
 import path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });

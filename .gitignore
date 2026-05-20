@@ -1,12 +1,53 @@
-node_modules
-dist
+# ============================================
+# Freelance Sales Automation — Git Ignore
+# ============================================
+
+# --- Dependencies & Build ---
+node_modules/
+dist/
+.pnp/
+.pnp.js
+
+# --- Environment & Secrets ---
 .env
+.env.local
+.env.*.local
+
+# --- Logs ---
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- OS & Editor ---
 .DS_Store
-.vscode
-.idea
-test_hf_*
-test_hf.js
-release_lock.ts
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Python (AI Core) ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+src/ai_core/venv/
+*.egg-info/
+*.egg
+
+# --- Test & Temp Files ---
+test_*.ts
+test_*.js
+test_*.py
+check_*.ts
+verify_*.ts
+setup_*.ts
+
+# --- Project Specific ---
 files/
 src/scripts/archive/

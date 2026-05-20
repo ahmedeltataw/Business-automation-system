@@ -1,3 +1,11 @@
+/**
+ * Health Check
+ *
+ * Comprehensive system verification script. Tests connectivity to Supabase,
+ * Upstash Redis, Gemini AI, and the Telegram Bot. Displays colorized terminal
+ * output with pass/fail status for each subsystem.
+ */
+
 import { createClient } from '@supabase/supabase-js';
 import { Redis } from 'ioredis';
 import { Bot } from 'grammy';

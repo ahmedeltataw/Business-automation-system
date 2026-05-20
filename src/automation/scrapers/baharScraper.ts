@@ -1,3 +1,11 @@
+/**
+ * Bahar Website Scraper
+ * 
+ * Scrapes freelance project listings from Bahar (bahar.website).
+ * Extracts project metadata including title, description, budget, and client info,
+ * then persists enriched records to Supabase.
+ */
+
 import { supabase, TABLES } from '../../config/db';
 import { ensureSession } from '../sessionManager';
 import { createStealthBrowser, humanDelay } from '../browserConfig';
@@ -5,7 +13,17 @@ import { notifyTelegram } from '../../telegram/notifier';
 import { checkBan } from '../../monitoring/banDetector';
 import { agentConfig } from '../../config/agentConfig';
 
-export interface BaharProject {
+/** Raw project data extracted from page DOM */
+interface RawProject {
+  title: string;
+  description: string;
+  budget: string;
+  url: string;
+  client_name: string;
+}
+
+/** Final project record with generated fields */
+interface EnrichedProject {
   external_id: string;
   title: string;
   description: string;
@@ -16,8 +34,11 @@ export interface BaharProject {
   client_name: string;
 }
 
-export async function scrapeBahar(): Promise<BaharProject[]> {
-  const projects: BaharProject[] = [];
+const BASE_URL = 'https://bahar.website';
+
+export async function scrapeBahar(): Promise<EnrichedProject[]> {
+  const projects: EnrichedProject[] = [];
+
   let cookies: any[];
   try {
     cookies = await ensureSession('bahar');
@@ -25,25 +46,34 @@ export async function scrapeBahar(): Promise<BaharProject[]> {
     console.error('Session fetch failed for bahar:', err);
     cookies = [];
   }
+
   const { browser, page } = await createStealthBrowser(true);
+
   try {
     await page.context().addCookies(cookies);
+
     const platform = agentConfig.scrapers.platforms.bahar;
-    await page.goto(platform.baseUrl + platform.projectsPath, { waitUntil: 'domcontentloaded', timeout: agentConfig.scrapers.navTimeout });
+    await page.goto(platform.baseUrl + platform.projectsPath, {
+      waitUntil: 'domcontentloaded',
+      timeout: agentConfig.scrapers.navTimeout,
+    });
     await humanDelay(1000, 2000);
+
     const banResult = await checkBan(page);
     if (banResult.banned) {
       await notifyTelegram(`🚨 *Ban Detected on Bahar*\n${banResult.reason}`);
       return [];
     }
-    const raw = await page.evaluate(() => {
-      const items: any[] = [];
-      document.querySelectorAll('tr.project-row').forEach(row => {
+
+    const rawProjects = await page.evaluate((): RawProject[] => {
+      const items: RawProject[] = [];
+      document.querySelectorAll('tr.project-row').forEach((row) => {
         const link = row.querySelector('h2 a');
         const desc = row.querySelector('p.project__brief');
         const budgetEl = row.querySelector('[class*="budget"], [class*="Budget"], [class*="price"], [class*="Price"]');
         const clientEl = row.querySelector('ul.project__meta li bdi');
         const href = link?.getAttribute('href') ?? '';
+
         items.push({
           title: link?.textContent?.trim() ?? '',
           description: desc?.textContent?.trim() ?? '',
@@ -54,29 +84,57 @@ export async function scrapeBahar(): Promise<BaharProject[]> {
       });
       return items;
     });
-    for (const item of raw) {
-      const fullUrl = item.url ? (item.url.startsWith('http') ? item.url : `https://bahar.website${item.url}`) : '';
+
+    for (const raw of rawProjects) {
+      const fullUrl = raw.url
+        ? (raw.url.startsWith('http') ? raw.url : `${BASE_URL}${raw.url}`)
+        : '';
+
       const idMatch = fullUrl.match(/\/project[s]?\/(\d+)/);
-      const externalId = idMatch ? idMatch[1] : `bahar-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+      const externalId = idMatch
+        ? idMatch[1]
+        : `bahar-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
       projects.push({
-        external_id: externalId, title: item.title, description: item.description,
-        budget: item.budget, budget_currency: 'EGP', url: fullUrl,
-        posted_at: new Date().toISOString(), client_name: item.client_name,
+        external_id: externalId,
+        title: raw.title,
+        description: raw.description,
+        budget: raw.budget,
+        budget_currency: 'EGP',
+        url: fullUrl,
+        posted_at: new Date().toISOString(),
+        client_name: raw.client_name,
       });
     }
+
     if (projects.length > 0) {
       const { error } = await supabase.from(TABLES.scrapedJobs).upsert(
-        projects.map(p => ({
-          platform: 'bahar', external_id: p.external_id, title: p.title,
-          description: p.description, budget: p.budget, budget_currency: p.budget_currency,
-          skills: [], category: 'Freelance', url: p.url, posted_at: p.posted_at,
-          client_name: p.client_name, client_country: '', raw_data: p, status: 'new',
+        projects.map((p) => ({
+          platform: 'bahar',
+          external_id: p.external_id,
+          title: p.title,
+          description: p.description,
+          budget: p.budget,
+          budget_currency: p.budget_currency,
+          skills: [],
+          category: 'Freelance',
+          url: p.url,
+          posted_at: p.posted_at,
+          client_name: p.client_name,
+          client_country: '',
+          raw_data: p,
+          status: 'new',
         })),
         { onConflict: 'external_id' }
       );
-      if (error) console.error('Failed to persist Bahar projects:', error.message);
-      else console.log(`Persisted ${projects.length} Bahar projects`);
+
+      if (error) {
+        console.error('Failed to persist Bahar projects:', error.message);
+      } else {
+        console.log(`Persisted ${projects.length} Bahar projects`);
+      }
     }
+
     return projects;
   } finally {
     await browser.close();

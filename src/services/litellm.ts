@@ -1,11 +1,22 @@
+/**
+ * LiteLLM Unified AI Gateway
+ *
+ * Central routing layer for all AI providers (FreeLLMAPI, Cloudflare, Gemini,
+ * Groq, DeepSeek, Hugging Face, OpenRouter). Resolves functional aliases
+ * (e.g. 'free-lead-scorer') to provider-specific model chains with automatic
+ * fallback, per-model cooldown, and schema-constrained JSON generation.
+ */
+
 import { env } from '../config/env';
 
+/** Standardized AI response shape shared across all providers */
 export interface AIResponse {
   text: string;
   tokensUsed: number;
   modelUsed: string;
 }
 
+/** Named group of models that serve a specific functional role */
 export interface ModelAlias {
   name: string;
   models: string[];

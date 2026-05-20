@@ -1,8 +1,18 @@
+/**
+ * AI Analysis Pipeline
+ *
+ * Fetches newly scraped jobs from Supabase, runs them through the AI router
+ * for scoring and analysis, updates the database with results, and sends
+ * Telegram alerts for high-score opportunities. Includes sequential throttling
+ * to avoid burst rate-limiting on upstream AI providers.
+ */
+
 import { supabase, TABLES } from '../config/db';
 import { aiRouter, AllModelsExhaustedError, JobMetadata } from './router';
 import { notifyTelegram } from '../telegram/notifier';
 import { agentConfig } from '../config/agentConfig';
 
+/** Platform display labels with emoji icons */
 const PLATFORM_ICONS: Record<string, string> = {
   mostaql: '🟢 مستقل',
   khamsat: '🟠 خمسات',
@@ -11,8 +21,41 @@ const PLATFORM_ICONS: Record<string, string> = {
   ureed: '💜 أوريد',
 };
 
-const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Job record shape returned from Supabase queries */
+interface JobRecord {
+  id: string;
+  title: string;
+  description: string;
+  platform: string;
+  budget?: string;
+  url?: string;
+  external_id?: string;
+  proposals_count?: number;
+  client_hiring_rate?: string;
+  execution_time?: string;
+  client_notes?: string;
+}
+
+/** AI analysis result shape */
+interface AnalysisResult {
+  score: number;
+  project_type: string;
+  tech_stack: string[];
+  client_pain_points: string[];
+  budget_suitability: string;
+  estimated_effort: string;
+  summary_ar: string;
+  recommended_sales_angle: string;
+  tailoredArabicProposal?: string;
+  lead_score_warning?: string;
+}
+
+/**
+ * Run the full AI analysis pipeline on all jobs with status 'new'.
+ * @returns Count of analyzed jobs and high-score alerts triggered
+ */
 export async function runAnalysisPipeline(): Promise<{ analyzed: number; highScore: number }> {
   console.log('\n=== AI Analysis Pipeline ===\n');
 
@@ -38,7 +81,6 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
   let highScore = 0;
 
   for (const job of jobs) {
-    // Deduplication check: verify this job hasn't been processed via external_id
     const { data: existingJob } = await supabase
       .from(TABLES.scrapedJobs)
       .select('id')
@@ -62,10 +104,10 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
     try {
       const metadata: JobMetadata = {
         platform: job.platform,
-        proposals_count: (job as any).proposals_count ?? undefined,
-        client_hiring_rate: (job as any).client_hiring_rate ?? undefined,
-        client_notes: (job as any).client_notes ?? undefined,
-        execution_time: (job as any).execution_time ?? undefined,
+        proposals_count: Number((job as Record<string, unknown>).proposals_count) || undefined,
+        client_hiring_rate: String((job as Record<string, unknown>).client_hiring_rate) || undefined,
+        client_notes: String((job as Record<string, unknown>).client_notes) || undefined,
+        execution_time: String((job as Record<string, unknown>).execution_time) || undefined,
       };
       const result = await aiRouter.analyzeJob(title, description, metadata);
 
@@ -98,10 +140,10 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
 
       if (result.score >= agentConfig.scoring.highScoreThreshold) {
         highScore++;
-        
+
         const proposal = result.tailoredArabicProposal || null;
 
-        await sendHighScoreAlert(job, result, proposal);
+        await sendHighScoreAlert(job as JobRecord, result as AnalysisResult, proposal);
 
         if (proposal) {
           const { error: propErr } = await supabase
@@ -116,32 +158,34 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
           if (propErr) {
             console.error(`[${job.platform}] Proposal persist failed: ${propErr.message}`);
           } else {
-            console.log(`  📝 Proposal generated for job #${job.id}`);
+            console.log(`  Proposal generated for job #${job.id}`);
           }
         }
       }
-      
-      // Sequential throttle: wait 3s before next job to avoid burst rate limiting
-      await sleep(3000);
 
-    } catch (err: any) {
+      await sleep(3000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       if (err instanceof AllModelsExhaustedError) {
-        console.error(`  [AI] All models rate-limited, skipping this project.`);
+        console.error('  [AI] All models rate-limited, skipping this project.');
         continue;
       }
-      console.error(`  [${job.platform}] Analysis failed: ${displayTitle} — ${err.message}`);
+      console.error(`  [${job.platform}] Analysis failed: ${displayTitle} — ${message}`);
     }
   }
 
-  console.log(`\n✅ Analyzed: ${analyzed} | High-score alerts: ${highScore}`);
+  console.log(`\nAnalyzed: ${analyzed} | High-score alerts: ${highScore}`);
   return { analyzed, highScore };
 }
 
+/**
+ * Send a formatted Telegram alert for a high-score job opportunity.
+ */
 async function sendHighScoreAlert(
-  job: { id: string; title: string; description: string; platform: string; budget?: string; url?: string; external_id?: string; proposals_count?: number; client_hiring_rate?: string; execution_time?: string; client_notes?: string },
-  analysis: { score: number; project_type: string; tech_stack: string[]; client_pain_points: string[]; budget_suitability: string; estimated_effort: string; summary_ar: string; recommended_sales_angle: string; tailoredArabicProposal?: string; lead_score_warning?: string },
+  job: JobRecord,
+  analysis: AnalysisResult,
   proposal?: string | null
-) {
+): Promise<void> {
   const platformIcon = PLATFORM_ICONS[job.platform] || job.platform;
   const techStack = analysis.tech_stack.length > 0
     ? analysis.tech_stack.join(' • ')
@@ -152,20 +196,19 @@ async function sendHighScoreAlert(
   const budget = job.budget?.trim() || 'غير محدد';
   const url = job.url?.trim() || `https://${job.platform}.com`;
 
-  const lines = [
-    `🔥 *فرصة عمل ممتازة!*`,
-    ``,
-    `${platformIcon}`,
+  const lines: string[] = [
+    '🔥 *فرصة عمل ممتازة!*',
+    '',
+    platformIcon,
     `*العنوان:* ${job.title.trim().slice(0, 100)}`,
     `*النوع:* ${analysis.project_type}`,
     `*الميزانية:* ${budget}`,
     `*التقنيات:* ${techStack}`,
     `*الجهد:* ${analysis.estimated_effort}`,
-    ``,
+    '',
     `*الملخص:* ${analysis.summary_ar}`,
   ];
 
-  // Metadata block
   const metaParts: string[] = [];
   if (job.execution_time) metaParts.push(`*المدة:* ${job.execution_time}`);
   if (job.proposals_count !== undefined && job.proposals_count > 0) metaParts.push(`*عدد العروض:* ${job.proposals_count}`);
@@ -173,7 +216,7 @@ async function sendHighScoreAlert(
   if (metaParts.length > 0) lines.splice(5, 0, ...metaParts);
 
   if (analysis.lead_score_warning) {
-    lines.push(``, `⚠️ *تنبيه:* ${analysis.lead_score_warning}`);
+    lines.push('', `⚠️ *تنبيه:* ${analysis.lead_score_warning}`);
   }
 
   if (painPoints) {
@@ -185,16 +228,16 @@ async function sendHighScoreAlert(
   }
 
   if (proposal) {
-    lines.push(``, `📝 *مسودة العرض المقترح:*`, `\`\`\`${proposal}\`\`\``);
+    lines.push('', '📝 *مسودة العرض المقترح:*', `\`\`\`${proposal}\`\`\``);
   } else {
-    lines.push(``, `*✍️ عرض السعر:* لم يتم إنشاؤه (لم يصل للحد الأدنى)`);
+    lines.push('', '*✍️ عرض السعر:* لم يتم إنشاؤه (لم يصل للحد الأدنى)');
   }
 
   if (job.client_notes) {
-    lines.push(``, `📌 *ملاحظات العميل:* ${job.client_notes.slice(0, 200)}`);
+    lines.push('', `📌 *ملاحظات العميل:* ${job.client_notes.slice(0, 200)}`);
   }
 
-  lines.push(``, `[🔗 رابط المشروع](${url})`);
+  lines.push('', `[🔗 رابط المشروع](${url})`);
 
   await notifyTelegram(lines.join('\n'), job.id, url);
 }

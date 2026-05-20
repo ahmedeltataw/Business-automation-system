@@ -1,3 +1,11 @@
+/**
+ * Ban Detector
+ *
+ * Monitors Playwright pages for account suspension, access denial,
+ * and Cloudflare challenge signals. Supports both hard-ban detection
+ * (blocking) and soft-ban detection (logged but non-blocking).
+ */
+
 import type { Page } from 'playwright';
 
 export interface BanCheckResult {

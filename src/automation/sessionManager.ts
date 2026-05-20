@@ -1,3 +1,11 @@
+/**
+ * Session Manager
+ *
+ * Manages authenticated browser sessions for platforms that require login.
+ * Stores session cookies in Supabase, auto-refreshes expired sessions,
+ * and detects logout states by scanning page content for known signals.
+ */
+
 import { supabase } from '../config/db';
 import { createStealthBrowser } from './browserConfig';
 import { notifyTelegram } from '../telegram/notifier';

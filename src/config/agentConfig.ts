@@ -1,3 +1,12 @@
+/**
+ * Agent Configuration
+ *
+ * Centralized runtime configuration for the entire automation system.
+ * Covers browser stealth settings, session management, AI provider timeouts,
+ * scoring thresholds, scheduler cron expressions, scraper parameters,
+ * proposal templates, and notification settings.
+ */
+
 export const agentConfig = {
   browser: {
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',

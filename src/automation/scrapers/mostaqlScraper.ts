@@ -1,3 +1,10 @@
+/**
+ * Mostaql Platform Scraper
+ *
+ * Scrapes freelance project listings from Mostaql (mostaql.com),
+ * enriches top results with detail-page metadata, and persists
+ * them to the Supabase jobs table.
+ */
 import { supabase, TABLES } from '../../config/db';
 import { ensureSession } from '../sessionManager';
 import { createStealthBrowser, humanDelay } from '../browserConfig';

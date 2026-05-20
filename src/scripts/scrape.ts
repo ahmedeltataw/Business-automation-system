@@ -1,3 +1,11 @@
+/**
+ * Manual Scraper Runner
+ *
+ * Executes a one-off scrape cycle across all configured platforms
+ * (Mostaql, Khamsat), followed by the AI analysis pipeline.
+ * Sends a Telegram summary on completion or failure.
+ */
+
 import { scrapeMostaql } from '../automation/scrapers/mostaqlScraper';
 import { scrapeKhamsat } from '../automation/scrapers/khamsatScraper';
 import { notifyTelegram } from '../telegram/notifier';

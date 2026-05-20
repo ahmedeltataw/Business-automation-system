@@ -1,3 +1,11 @@
+/**
+ * Telegram Bot
+ *
+ * Interactive Telegram bot for the sales automation system.
+ * Handles callback queries for archiving jobs and regenerating proposals
+ * directly from Telegram alert messages. Restricted to a single admin user.
+ */
+
 import { Bot } from 'grammy';
 import { env } from '../config/env';
 import { supabase, TABLES } from '../config/db';
@@ -70,6 +78,9 @@ bot.on('callback_query', async (ctx) => {
   }
 });
 
+/**
+ * Start the Telegram bot and begin listening for callback queries.
+ */
 export async function startBot(): Promise<void> {
   console.log('[Telegram Bot] Starting...');
   await bot.start();

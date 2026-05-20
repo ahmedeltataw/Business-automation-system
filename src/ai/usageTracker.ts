@@ -1,4 +1,26 @@
+/**
+ * AI Usage Tracker
+ *
+ * Tracks daily model usage against configured quotas via the ai_usage_log
+ * Supabase table. Provides availability checks, usage summaries, and
+ * per-model quota enforcement for the fallback routing chain.
+ */
+
+/**
+ * AI Usage Tracker
+ *
+ * Tracks daily token usage per model against configured limits.
+ * Stores usage logs in Supabase and provides quota-checking utilities
+ * to prevent rate-limit exhaustion across all AI providers.
+ */
+
 import { supabase } from '../config/db';
+
+interface UsageInfo {
+  used: number;
+  limit: number;
+  percentage: number;
+}
 
 const MODEL_LIMITS: Record<string, number> = {
   'gemma-4-31b-it': 1500,
@@ -27,13 +49,16 @@ const MODEL_LIMITS: Record<string, number> = {
   'openrouter/google/gemini-2.0-flash': 999999,
 };
 
-
-
+/** Get today's date in Cairo timezone (YYYY-MM-DD) */
 function todayDate(): string {
   const cairo = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
   return cairo;
 }
 
+/**
+ * Get the number of times a model has been called today.
+ * @param modelName - Model identifier
+ */
 export async function getUsageToday(modelName: string): Promise<number> {
   const date = todayDate();
   const { count, error } = await supabase
@@ -43,13 +68,17 @@ export async function getUsageToday(modelName: string): Promise<number> {
     .eq('date', date);
 
   if (error) {
-    console.error(`[UsageTracker] getUsageToday error:`, error.message);
+    console.error('[UsageTracker] getUsageToday error:', error.message);
     return 0;
   }
 
   return count ?? 0;
 }
 
+/**
+ * Check if a model has remaining daily quota.
+ * @param modelName - Model identifier
+ */
 export async function isModelAvailable(modelName: string): Promise<boolean> {
   const limit = MODEL_LIMITS[modelName];
   if (limit === undefined) return false;
@@ -57,6 +86,12 @@ export async function isModelAvailable(modelName: string): Promise<boolean> {
   return used < limit;
 }
 
+/**
+ * Log a single AI model usage event to the database.
+ * @param modelName - Model identifier
+ * @param tokensUsed - Number of tokens consumed
+ * @param endpoint - Functional endpoint name (qualify, propose, followup)
+ */
 export async function logUsage(
   modelName: string,
   tokensUsed: number,
@@ -70,11 +105,11 @@ export async function logUsage(
   });
 
   if (error) {
-    console.error(`[UsageTracker] logUsage error:`, error.message);
+    console.error('[UsageTracker] logUsage error:', error.message);
   }
 }
 
-export async function getTotalUsageToday(): Promise<Record<string, { used: number; limit: number; percentage: number }>> {
+export async function getTotalUsageToday(): Promise<Record<string, UsageInfo>> {
   const date = todayDate();
   const { data, error } = await supabase
     .from('ai_usage_log')
@@ -87,17 +122,17 @@ export async function getTotalUsageToday(): Promise<Record<string, { used: numbe
   }
 
   const counts: Record<string, number> = {};
-  for (const row of data || []) {
-    counts[row.model_name] = (counts[row.model_name] || 0) + 1;
+  for (const row of data ?? []) {
+    counts[row.model_name] = (counts[row.model_name] ?? 0) + 1;
   }
 
-  const result: Record<string, { used: number; limit: number; percentage: number }> = {};
+  const result: Record<string, UsageInfo> = {};
   for (const [model, limit] of Object.entries(MODEL_LIMITS)) {
-    const used = counts[model] || 0;
+    const used = counts[model] ?? 0;
     result[model] = {
       used,
       limit,
-      percentage: limit === 999999 ? 0 : Math.round((used / limit) * 100 * 10) / 10,
+      percentage: limit === 999999 ? 0 : Math.round((used / limit) * 1000) / 10,
     };
   }
 
@@ -134,8 +169,8 @@ export async function getUsageSummaryMessage(): Promise<string> {
 
   const lines = ['📊 *تقرير استهلاك AI اليوم:*', ''];
   for (const [model, info] of Object.entries(usage)) {
-    const label = labels[model] || model;
-    const limitStr = info.limit === 999999 ? '∞' : String(info.limit);
+    const label = labels[model] ?? model;
+    const limitStr = info.limit === 999999 ? '\u221e' : String(info.limit);
     const percentStr = info.limit === 999999 ? '' : ` (${info.percentage}%)`;
     lines.push(`• ${label}: ${info.used}/${limitStr}${percentStr}`);
   }

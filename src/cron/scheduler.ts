@@ -1,3 +1,11 @@
+/**
+ * Job Scheduler
+ *
+ * Cron-based autopilot that runs scrape + AI analysis cycles every 15 minutes
+ * and daily maintenance at midnight. Uses a Supabase-based distributed lock
+ * to prevent concurrent executions. Logs all events to the system_log table.
+ */
+
 import cron from 'node-cron';
 import { supabase } from '../config/db';
 import { notifyTelegram } from '../telegram/notifier';

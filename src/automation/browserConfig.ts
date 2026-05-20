@@ -1,3 +1,12 @@
+/**
+ * Browser Configuration
+ *
+ * Creates stealth-configured Playwright browser instances with anti-detection
+ * measures: WebDriver masking, canvas fingerprint noise, and human-like mouse
+ * movement via cubic Bezier curves. All browser settings are driven by
+ * agentConfig for centralized control.
+ */
+
 import { chromium } from 'playwright-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import type { Browser, BrowserContext, Page } from 'playwright';

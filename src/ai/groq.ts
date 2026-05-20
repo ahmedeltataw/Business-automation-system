@@ -1,6 +1,15 @@
+/**
+ * Groq AI Client
+ * 
+ * Provides AI inference via Groq's ultra-fast LLM API.
+ * Supports key rotation for rate-limit resilience and automatic
+ * fallback across multiple Groq-hosted models.
+ */
+
 import { env } from '../config/env';
 import { agentConfig } from '../config/agentConfig';
 
+/** Standardized AI response shape shared across all providers */
 export interface AIResponse {
   text: string;
   tokensUsed: number;
@@ -8,14 +17,17 @@ export interface AIResponse {
 }
 
 const GROQ_MODELS = agentConfig.ai.groq.models;
-
 const GR = agentConfig.ai.groq;
 
+/**
+ * Groq API client with multi-key rotation and model fallback chain.
+ */
 class GroqClient {
   private clients: any[] = [];
   private apiKeys: string[] = [];
   private currentKeyIndex = 0;
 
+  /** Initialize Groq SDK clients (lazy, supports up to 2 API keys) */
   async init(): Promise<void> {
     if (this.clients.length > 0) return;
     const { Groq } = await import('groq-sdk') as any;
@@ -24,6 +36,7 @@ class GroqClient {
     this.clients = this.apiKeys.map((key) => new Groq({ apiKey: key }));
   }
 
+  /** Rotate to the next available API key for rate-limit recovery */
   private rotateKey(): void {
     this.currentKeyIndex = (this.currentKeyIndex + 1) % this.clients.length;
   }
@@ -32,6 +45,12 @@ class GroqClient {
     return this.clients[this.currentKeyIndex];
   }
 
+  /**
+   * Send a prompt to Groq with automatic model fallback.
+   * @param prompt - User prompt text
+   * @param systemPrompt - Optional system instruction
+   * @returns AIResponse with generated text and metadata
+   */
   async call(prompt: string, systemPrompt?: string): Promise<AIResponse> {
     return this.callWithFallback(prompt, systemPrompt);
   }
@@ -42,7 +61,10 @@ class GroqClient {
 
     const messages: any[] = [];
     if (systemPrompt) {
-      messages.push({ role: 'system', content: systemPrompt || 'You are a helpful assistant for a freelance professional.' });
+      messages.push({
+        role: 'system',
+        content: systemPrompt || 'You are a helpful assistant for a freelance professional.',
+      });
     }
     messages.push({ role: 'user', content: prompt });
 

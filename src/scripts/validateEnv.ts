@@ -1,4 +1,12 @@
-﻿import { env } from '../config/env';
+﻿/**
+ * Environment Validator
+ *
+ * Quick sanity check for all required environment variables.
+ * Validates format prefixes (e.g. AIzaSy for Gemini, https:// for Supabase)
+ * and masks sensitive values in terminal output.
+ */
+
+import { env } from '../config/env';
 
 console.log('');
 console.log('=== Environment Validation ===');

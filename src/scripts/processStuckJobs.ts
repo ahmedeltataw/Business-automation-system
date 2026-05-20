@@ -1,3 +1,11 @@
+/**
+ * Process Stuck Jobs
+ *
+ * One-time script to analyze and process jobs stuck in 'new' status.
+ * Runs AI scoring and proposal generation on all pending jobs up to the
+ * configured batch size.
+ */
+
 import { supabase, TABLES } from '../config/db';
 import { aiRouter, AllModelsExhaustedError } from '../ai/router';
 import { generateProposal } from '../ai/proposalGenerator';

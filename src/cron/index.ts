@@ -1,3 +1,11 @@
+/**
+ * Cron Entry Point
+ *
+ * CLI dispatcher for the automation system. Supports multiple run modes:
+ * autopilot (scheduled cycles), production (scheduler + bot + HTTP health),
+ * standalone bot, single cycle, maintenance, and dry-run verification.
+ */
+
 import 'dotenv/config';
 import http from 'http';
 import { startAutopilot, runFullCycle, releaseLock } from './scheduler';

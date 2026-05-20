@@ -1,3 +1,10 @@
+/**
+ * Khamsat Platform Scraper
+ *
+ * Scrapes service request listings from Khamsat (khamsat.com),
+ * filters by target categories, enriches with comment metadata,
+ * and persists to the Supabase jobs table.
+ */
 import { supabase, TABLES } from '../../config/db';
 import { ensureSession } from '../sessionManager';
 import { createStealthBrowser, humanDelay } from '../browserConfig';
@@ -21,6 +28,7 @@ export interface KhamsatRequest {
   client_notes: string;
 }
 
+// Target categories for Khamsat request filtering
 const TARGET_SECTIONS = [
   'الطلبات غير الموجودة',
   'ui/ux',
@@ -30,7 +38,7 @@ const TARGET_SECTIONS = [
   'تطوير مواقع',
   'تطوير تطبيقات',
   'تصميم',
-];
+] as const;
 
 export async function scrapeKhamsat(): Promise<KhamsatRequest[]> {
   const requests: KhamsatRequest[] = [];

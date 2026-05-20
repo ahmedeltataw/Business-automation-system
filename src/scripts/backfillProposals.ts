@@ -1,3 +1,11 @@
+/**
+ * Backfill Proposals
+ *
+ * One-time script to generate AI proposals for existing high-score jobs
+ * that were analyzed before the proposal-generation feature was added.
+ * Processes up to 50 jobs per run.
+ */
+
 import { supabase, TABLES } from '../config/db';
 import { generateProposal } from '../ai/proposalGenerator';
 import { notifyTelegram } from '../telegram/notifier';

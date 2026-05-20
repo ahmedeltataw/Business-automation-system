@@ -1,3 +1,11 @@
+/**
+ * Midnight Maintenance
+ *
+ * Daily cleanup tasks: archive old analyzed jobs (7+ days), purge very old
+ * archived jobs (30+ days), collect telemetry, and send a Telegram summary
+ * report with AI usage statistics.
+ */
+
 import { supabase, TABLES } from '../config/db';
 import { notifyTelegram } from '../telegram/notifier';
 import { getTotalUsageToday } from '../ai/usageTracker';

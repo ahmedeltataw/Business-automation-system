@@ -1,6 +1,15 @@
+/**
+ * Google Gemini AI Client
+ *
+ * Provides inference via Google's Gemini models using the @google/genai SDK.
+ * Supports dual API key rotation, structured JSON responses, and
+ * exponential backoff on rate-limit (429) errors.
+ */
+
 import { env } from '../config/env';
 import { agentConfig } from '../config/agentConfig';
 
+/** Standardized AI response shape shared across all providers */
 export interface AIResponse {
   text: string;
   tokensUsed: number;
@@ -9,15 +18,32 @@ export interface AIResponse {
 
 const G = agentConfig.ai.gemini;
 
+/** Gemini SDK generateContent config shape */
+interface GeminiConfig {
+  systemInstruction?: string;
+  responseMimeType?: string;
+  responseSchema?: Record<string, unknown>;
+}
+
+/**
+ * Gemini API client with lazy initialization and retry logic.
+ */
 class GeminiClient {
   private client: any = null;
 
+  /** Initialize the Gemini SDK client (lazy, on first call) */
   async init(): Promise<void> {
     if (this.client) return;
-    const { GoogleGenAI } = await import('@google/genai') as any;
+    const { GoogleGenAI } = await import('@google/genai');
     this.client = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   }
 
+  /**
+   * Send a prompt to a specific Gemini model.
+   * @param modelName - Model identifier (e.g. gemini-2.5-flash)
+   * @param prompt - User prompt text
+   * @param systemPrompt - Optional system instruction
+   */
   async call(
     modelName: string,
     prompt: string,
@@ -26,25 +52,20 @@ class GeminiClient {
     await this.init();
     const startTime = Date.now();
 
-    const config: any = {};
+    const config: GeminiConfig = {};
     if (systemPrompt) {
       config.systemInstruction = systemPrompt;
     }
 
     let lastError: Error | null = null;
 
-    for (const attempt of G.retryAttempts) {
+    for (let i = 0; i < G.retryAttempts.length; i++) {
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), G.timeoutMs);
-
-        const response = await this.client.models.generateContent({
+        const response = await this.client!.models.generateContent({
           model: modelName,
           contents: prompt,
           config,
         });
-
-        clearTimeout(timeout);
 
         const text = response.text?.trim() ?? '';
         const tokens = response.usageMetadata?.totalTokenCount ?? 0;
@@ -53,40 +74,47 @@ class GeminiClient {
         console.log(`[Gemini] ${modelName} | ${tokens} tokens | ${duration}ms`);
 
         return { text, tokensUsed: tokens, modelUsed: modelName };
-      } catch (err: any) {
-        lastError = err;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        lastError = err instanceof Error ? err : new Error(message);
 
-        if (err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED')) {
-          const idx = G.retryAttempts.indexOf(attempt);
-          if (idx < G.retryWaits429.length) {
-            console.log(`[Gemini] Rate limited, waiting ${G.retryWaits429[idx]}ms (attempt ${attempt})`);
-            await new Promise(r => setTimeout(r, G.retryWaits429[idx]));
+        if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
+          if (i < G.retryWaits429.length) {
+            console.log(`[Gemini] Rate limited, waiting ${G.retryWaits429[i]}ms (attempt ${i + 1})`);
+            await new Promise((resolve) => setTimeout(resolve, G.retryWaits429[i]));
             continue;
           }
-          throw new Error(`RateLimitError: ${err.message}`);
+          throw new Error(`RateLimitError: ${message}`);
         }
 
-        if (err.message?.includes('503') || err.message?.includes('UNAVAILABLE')) {
-          throw new Error(`ModelUnavailableError: ${err.message}`);
+        if (message.includes('503') || message.includes('UNAVAILABLE')) {
+          throw new Error(`ModelUnavailableError: ${message}`);
         }
 
-        throw new Error(`GeminiError: ${err.message}`);
+        throw new Error(`GeminiError: ${message}`);
       }
     }
 
-    throw lastError || new Error('Unknown Gemini error');
+    throw lastError ?? new Error('Unknown Gemini error');
   }
 
+  /**
+   * Send a prompt expecting schema-constrained JSON output.
+   * @param modelName - Model identifier
+   * @param prompt - User prompt text
+   * @param systemInstruction - System instruction
+   * @param schema - JSON schema for response validation
+   */
   async callWithSchema(
     modelName: string,
     prompt: string,
     systemInstruction: string,
-    schema: object
+    schema: Record<string, unknown>
   ): Promise<AIResponse> {
     await this.init();
     const startTime = Date.now();
 
-    const config: any = {
+    const config: GeminiConfig = {
       systemInstruction,
       responseMimeType: 'application/json',
       responseSchema: schema,
@@ -94,18 +122,13 @@ class GeminiClient {
 
     let lastError: Error | null = null;
 
-    for (const attempt of G.retryAttempts) {
+    for (let i = 0; i < G.retryAttempts.length; i++) {
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), G.timeoutMs);
-
-        const response = await this.client.models.generateContent({
+        const response = await this.client!.models.generateContent({
           model: modelName,
           contents: prompt,
           config,
         });
-
-        clearTimeout(timeout);
 
         const text = response.text?.trim() ?? '';
         const tokens = response.usageMetadata?.totalTokenCount ?? 0;
@@ -113,25 +136,28 @@ class GeminiClient {
         console.log(`[Gemini] ${modelName} (schema) | ${tokens} tokens | ${duration}ms`);
 
         return { text, tokensUsed: tokens, modelUsed: modelName };
-      } catch (err: any) {
-        lastError = err;
-        if (err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED')) {
-          const idx = G.retryAttempts.indexOf(attempt);
-          if (idx < G.retryWaits429.length) {
-            console.log(`[Gemini] Rate limited, waiting ${G.retryWaits429[idx]}ms (attempt ${attempt})`);
-            await new Promise(r => setTimeout(r, G.retryWaits429[idx]));
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        lastError = err instanceof Error ? err : new Error(message);
+
+        if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
+          if (i < G.retryWaits429.length) {
+            console.log(`[Gemini] Rate limited, waiting ${G.retryWaits429[i]}ms (attempt ${i + 1})`);
+            await new Promise((resolve) => setTimeout(resolve, G.retryWaits429[i]));
             continue;
           }
-          throw new Error(`RateLimitError: ${err.message}`);
+          throw new Error(`RateLimitError: ${message}`);
         }
-        if (err.message?.includes('503') || err.message?.includes('UNAVAILABLE')) {
-          throw new Error(`ModelUnavailableError: ${err.message}`);
+
+        if (message.includes('503') || message.includes('UNAVAILABLE')) {
+          throw new Error(`ModelUnavailableError: ${message}`);
         }
-        throw new Error(`GeminiError: ${err.message}`);
+
+        throw new Error(`GeminiError: ${message}`);
       }
     }
 
-    throw lastError || new Error('Unknown Gemini error');
+    throw lastError ?? new Error('Unknown Gemini error');
   }
 }
 

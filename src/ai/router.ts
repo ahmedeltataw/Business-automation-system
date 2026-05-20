@@ -1,3 +1,20 @@
+/**
+ * AI Router
+ *
+ * Central routing layer for all AI model calls via LiteLLM. Handles job
+ * analysis with structured JSON output, proposal generation, and quota
+ * management. Enforces validation on all analysis responses.
+ */
+
+/**
+ * AI Router & Job Analyzer
+ *
+ * Central routing layer for AI-powered freelance job analysis. Sends job
+ * postings through the LiteLLM gateway with a detailed system prompt that
+ * scores relevance, predicts tech stack, identifies pain points, and generates
+ * Arabic proposals. Includes JSON extraction, validation, and quota tracking.
+ */
+
 import { litellm, ALIASES } from '../services/litellm';
 import { isModelAvailable, logUsage } from './usageTracker';
 
@@ -74,7 +91,7 @@ If the metadata includes 'proposals_count' (integer):
 
 - Respond with valid JSON only, no markdown formatting`;
 
-const SCHEMA = {
+const SCHEMA: Record<string, unknown> = {
   type: 'object',
   properties: {
     score: { type: 'number' },
@@ -92,7 +109,7 @@ const SCHEMA = {
   required: ['score', 'is_relevant', 'project_type', 'tech_stack', 'client_pain_points', 'budget_suitability', 'estimated_effort', 'summary_ar', 'recommended_sales_angle', 'tailoredArabicProposal'],
 };
 
-interface JobAnalysis {
+export interface JobAnalysis {
   score: number;
   is_relevant: boolean;
   project_type: 'UI/UX' | 'Frontend' | 'Full-Stack' | 'Mobile' | 'Irrelevant';
@@ -130,7 +147,17 @@ export interface JobMetadata {
 }
 
 class AIRouter {
-  async analyzeJob(title: string, description: string, metadata?: JobMetadata): Promise<JobAnalysis> {
+  /**
+   * Analyze a freelance job posting and return a structured scoring result.
+   * @param title - Job title
+   * @param description - Full job description
+   * @param metadata - Optional metadata (platform, proposals count, hiring rate)
+   */
+  async analyzeJob(
+    title: string,
+    description: string,
+    metadata?: JobMetadata
+  ): Promise<JobAnalysis> {
     let metaBlock = '';
     if (metadata) {
       const parts: string[] = [];
@@ -159,27 +186,44 @@ Apply the scoring criteria strictly. Return valid JSON only.`;
   }
 }
 
+/**
+ * Call the backup AI agent for general-purpose queries.
+ * @param prompt - User prompt
+ * @param endpoint - Target endpoint identifier
+ */
 export async function callAI(
   prompt: string,
   endpoint: Exclude<AIEndpoint, 'propose'>
 ): Promise<RouterResult> {
-    const result = await litellm.call('free-backup-agent', prompt);
+  const result = await litellm.call('free-backup-agent', prompt);
   await logUsage(result.modelUsed, result.tokensUsed, endpoint);
   return { response: result.text, modelUsed: result.modelUsed, tokensUsed: result.tokensUsed };
 }
 
-export async function callProposalAI(prompt: string, systemPrompt?: string): Promise<RouterResult | null> {
+/**
+ * Call the proposal-generation AI with a system prompt.
+ * Returns null if all models are exhausted.
+ */
+export async function callProposalAI(
+  prompt: string,
+  systemPrompt?: string
+): Promise<RouterResult | null> {
   try {
     const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
     const result = await litellm.call('free-proposal-generator', fullPrompt);
     await logUsage(result.modelUsed, result.tokensUsed, 'propose');
     return { response: result.text, modelUsed: result.modelUsed, tokensUsed: result.tokensUsed };
-  } catch (err: any) {
-    console.error(`[Router] Proposal generation failed: ${err.message}`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[Router] Proposal generation failed: ${message}`);
     return null;
   }
 }
 
+/**
+ * Check remaining daily quota for all configured AI models.
+ * @returns Map of model name to availability (1 = available, 0 = exhausted)
+ */
 export async function getRemainingQuota(): Promise<Record<string, number>> {
   const result: Record<string, number> = {};
   for (const [, alias] of Object.entries(ALIASES)) {
@@ -191,36 +235,37 @@ export async function getRemainingQuota(): Promise<Record<string, number>> {
   return result;
 }
 
-function validateAnalysis(parsed: any): asserts parsed is JobAnalysis {
-  if (typeof parsed.score !== 'number' || parsed.score < 0 || parsed.score > 5) {
-    parsed.score = 0;
+function validateAnalysis(parsed: unknown): asserts parsed is JobAnalysis {
+  const obj = parsed as Record<string, unknown>;
+  if (typeof obj.score !== 'number' || obj.score < 0 || obj.score > 5) {
+    obj.score = 0;
   }
-  if (typeof parsed.is_relevant !== 'boolean') {
-    parsed.is_relevant = false;
+  if (typeof obj.is_relevant !== 'boolean') {
+    obj.is_relevant = false;
   }
-  if (!['UI/UX', 'Frontend', 'Full-Stack', 'Mobile', 'Irrelevant'].includes(parsed.project_type)) {
-    parsed.project_type = 'Irrelevant';
+  if (!['UI/UX', 'Frontend', 'Full-Stack', 'Mobile', 'Irrelevant'].includes(String(obj.project_type))) {
+    obj.project_type = 'Irrelevant';
   }
-  if (!Array.isArray(parsed.tech_stack)) {
-    parsed.tech_stack = [];
+  if (!Array.isArray(obj.tech_stack)) {
+    obj.tech_stack = [];
   }
-  if (!Array.isArray(parsed.client_pain_points)) {
-    parsed.client_pain_points = [];
+  if (!Array.isArray(obj.client_pain_points)) {
+    obj.client_pain_points = [];
   }
-  if (!['Low', 'Medium', 'High'].includes(parsed.budget_suitability)) {
-    parsed.budget_suitability = 'Medium';
+  if (!['Low', 'Medium', 'High'].includes(String(obj.budget_suitability))) {
+    obj.budget_suitability = 'Medium';
   }
-  if (!['Low', 'Medium', 'High'].includes(parsed.estimated_effort)) {
-    parsed.estimated_effort = 'Medium';
+  if (!['Low', 'Medium', 'High'].includes(String(obj.estimated_effort))) {
+    obj.estimated_effort = 'Medium';
   }
-  if (typeof parsed.summary_ar !== 'string' || !parsed.summary_ar) {
-    parsed.summary_ar = 'تحليل آلي';
+  if (typeof obj.summary_ar !== 'string' || !obj.summary_ar) {
+    obj.summary_ar = 'تحليل آلي';
   }
-  if (typeof parsed.recommended_sales_angle !== 'string' || !parsed.recommended_sales_angle) {
-    parsed.recommended_sales_angle = '';
+  if (typeof obj.recommended_sales_angle !== 'string' || !obj.recommended_sales_angle) {
+    obj.recommended_sales_angle = '';
   }
-  if (typeof parsed.lead_score_warning !== 'string') {
-    parsed.lead_score_warning = undefined;
+  if (typeof obj.lead_score_warning !== 'string') {
+    obj.lead_score_warning = undefined;
   }
 }
 
@@ -239,7 +284,7 @@ function extractJson(text: string): string {
     try {
       JSON.parse(candidate);
       return candidate;
-    } catch (e) {
+    } catch {
       const nextEndIdx = text.lastIndexOf('}', endIdx - 1);
       if (nextEndIdx === -1 || nextEndIdx < startIdx) break;
       endIdx = nextEndIdx;
@@ -256,4 +301,3 @@ function stripJsonComments(json: string): string {
 }
 
 export const aiRouter = new AIRouter();
-export type { JobAnalysis };
