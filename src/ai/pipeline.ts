@@ -1,4 +1,4 @@
-import { supabase } from '../config/db';
+import { supabase, TABLES } from '../config/db';
 import { aiRouter, AllModelsExhaustedError, JobMetadata } from './router';
 import { notifyTelegram } from '../telegram/notifier';
 import { agentConfig } from '../config/agentConfig';
@@ -17,7 +17,7 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
   console.log('\n=== AI Analysis Pipeline ===\n');
 
   const { data: jobs, error } = await supabase
-    .from('scraped_jobs')
+    .from(TABLES.scrapedJobs)
     .select('id, title, description, platform, budget, url, external_id, proposals_count, client_hiring_rate, client_notes, execution_time')
     .eq('status', 'new')
     .limit(agentConfig.pipeline.batchSize);
@@ -40,7 +40,7 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
   for (const job of jobs) {
     // Deduplication check: verify this job hasn't been processed via external_id
     const { data: existingJob } = await supabase
-      .from('scraped_jobs')
+      .from(TABLES.scrapedJobs)
       .select('id')
       .eq('external_id', job.external_id)
       .neq('id', job.id)
@@ -70,7 +70,7 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
       const result = await aiRouter.analyzeJob(title, description, metadata);
 
       const { error: updateError } = await supabase
-        .from('scraped_jobs')
+        .from(TABLES.scrapedJobs)
         .update({
           ai_score: result.score,
           ai_is_relevant: result.is_relevant,
@@ -105,7 +105,7 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
 
         if (proposal) {
           const { error: propErr } = await supabase
-            .from('scraped_jobs')
+            .from(TABLES.scrapedJobs)
             .update({
               ai_proposal_text: proposal,
               ai_proposal_generated_at: new Date().toISOString(),

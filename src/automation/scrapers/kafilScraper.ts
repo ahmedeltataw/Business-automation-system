@@ -1,4 +1,4 @@
-import { supabase } from '../../config/db';
+import { supabase, TABLES } from '../../config/db';
 import { ensureSession } from '../sessionManager';
 import { createStealthBrowser, humanDelay } from '../browserConfig';
 import { notifyTelegram } from '../../telegram/notifier';
@@ -64,7 +64,7 @@ export async function scrapeKafil(): Promise<KafilProject[]> {
       });
     }
     if (projects.length > 0) {
-      const { error } = await supabase.from('scraped_jobs').upsert(
+      const { error } = await supabase.from(TABLES.scrapedJobs).upsert(
         projects.map(p => ({
           platform: 'kafil', external_id: p.external_id, title: p.title,
           description: p.description, budget: p.budget, budget_currency: p.budget_currency,

@@ -1,4 +1,4 @@
-import { supabase } from '../config/db';
+import { supabase, TABLES } from '../config/db';
 import { aiRouter, AllModelsExhaustedError } from '../ai/router';
 import { generateProposal } from '../ai/proposalGenerator';
 import { notifyTelegram } from '../telegram/notifier';
@@ -7,7 +7,7 @@ import { agentConfig } from '../config/agentConfig';
 async function main() {
   console.log('=== Processing Stuck New Jobs ===\n');
   const { data: jobs, error } = await supabase
-    .from('scraped_jobs')
+    .from(TABLES.scrapedJobs)
     .select('id, title, description, platform, budget, url, client_name, ai_score, ai_project_type, ai_tech_stack, ai_client_pain_points, ai_budget_suitability, ai_estimated_effort, ai_summary_ar, ai_recommended_sales_angle')
     .eq('status', 'new')
     .limit(agentConfig.pipeline.batchSize);
@@ -24,7 +24,7 @@ async function main() {
     const title = (job.title || '').trim();
     try {
       const result = await aiRouter.analyzeJob(title, desc);
-      const { error: upErr } = await supabase.from('scraped_jobs').update({
+      const { error: upErr } = await supabase.from(TABLES.scrapedJobs).update({
         ai_score: result.score,
         ai_is_relevant: result.is_relevant,
         ai_project_type: result.project_type,
@@ -46,7 +46,7 @@ async function main() {
         highScore++;
         const proposal = await generateProposal(job, result);
         if (proposal) {
-          await supabase.from('scraped_jobs').update({
+          await supabase.from(TABLES.scrapedJobs).update({
             ai_proposal_text: proposal,
             ai_proposal_generated_at: new Date().toISOString(),
           }).eq('id', job.id);

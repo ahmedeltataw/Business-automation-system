@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 import { checkBan } from './src/monitoring/banDetector';
 import { ensureSession } from './src/automation/sessionManager';
 import { litellm } from './src/services/litellm';
-import { supabase } from './src/config/db';
+import { supabase, TABLES } from './src/config/db';
 import { createStealthBrowser } from './src/automation/browserConfig';
 
 interface TestCase {
@@ -225,7 +225,7 @@ const dbTests: TestCase[] = [
     name: 'Supabase connection health check',
     category: 'Database',
     run: async () => {
-      const { error } = await supabase.from('scraped_jobs').select('id').limit(1);
+      const { error } = await supabase.from(TABLES.scrapedJobs).select('id').limit(1);
       if (error) return { pass: false, detail: `Connection failed: ${error.message}` };
       return { pass: true, detail: 'Supabase connection healthy' };
     },
@@ -235,7 +235,7 @@ const dbTests: TestCase[] = [
     name: 'Lead scoring columns exist in scraped_jobs',
     category: 'Database',
     run: async () => {
-      const { error } = await supabase.from('scraped_jobs').select('execution_time, proposals_count, client_hiring_rate, client_notes, ai_lead_score_warning').limit(1);
+      const { error } = await supabase.from(TABLES.scrapedJobs).select('execution_time, proposals_count, client_hiring_rate, client_notes, ai_lead_score_warning').limit(1);
       if (error) return { pass: false, detail: `Column check failed: ${error.message}` };
       return { pass: true, detail: 'All lead scoring columns present and accessible' };
     },

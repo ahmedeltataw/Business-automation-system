@@ -1,4 +1,4 @@
-import { supabase } from '../../config/db';
+import { supabase, TABLES } from '../../config/db';
 import { ensureSession } from '../sessionManager';
 import { createStealthBrowser, humanDelay } from '../browserConfig';
 import { notifyTelegram } from '../../telegram/notifier';
@@ -173,7 +173,7 @@ export async function scrapeKhamsat(): Promise<KhamsatRequest[]> {
     }
 
     if (requests.length > 0) {
-      const { error } = await supabase.from('scraped_jobs').upsert(
+      const { error } = await supabase.from(TABLES.scrapedJobs).upsert(
         requests.map((r) => ({
           platform: 'khamsat',
           external_id: r.external_id,

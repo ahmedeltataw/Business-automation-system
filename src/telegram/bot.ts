@@ -1,6 +1,6 @@
 import { Bot } from 'grammy';
 import { env } from '../config/env';
-import { supabase } from '../config/db';
+import { supabase, TABLES } from '../config/db';
 import { aiRouter } from '../ai/router';
 import { notifyTelegram } from './notifier';
 
@@ -22,7 +22,7 @@ bot.on('callback_query', async (ctx) => {
 
   if (action === 'archive_job') {
     const { error } = await supabase
-      .from('scraped_jobs')
+      .from(TABLES.scrapedJobs)
       .update({ status: 'archived' })
       .eq('id', jobId);
 
@@ -39,7 +39,7 @@ bot.on('callback_query', async (ctx) => {
     
     try {
       const { data: job } = await supabase
-        .from('scraped_jobs')
+        .from(TABLES.scrapedJobs)
         .select('*')
         .eq('id', jobId)
         .single();
@@ -50,7 +50,7 @@ bot.on('callback_query', async (ctx) => {
       
       if (result.tailoredArabicProposal) {
         await supabase
-          .from('scraped_jobs')
+          .from(TABLES.scrapedJobs)
           .update({
             ai_proposal_text: result.tailoredArabicProposal,
             ai_proposal_generated_at: new Date().toISOString(),

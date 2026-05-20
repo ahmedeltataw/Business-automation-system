@@ -1,4 +1,4 @@
-import { supabase } from '../config/db';
+import { supabase, TABLES } from '../config/db';
 import { notifyTelegram } from '../telegram/notifier';
 import { getTotalUsageToday } from '../ai/usageTracker';
 
@@ -11,7 +11,7 @@ export async function runMaintenance(): Promise<void> {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const { data: archived, error: archiveError } = await supabase
-      .from('scraped_jobs')
+      .from(TABLES.scrapedJobs)
       .update({ status: 'archived', updated_at: new Date().toISOString() })
       .eq('status', 'analyzed')
       .lt('created_at', sevenDaysAgo)
@@ -27,7 +27,7 @@ export async function runMaintenance(): Promise<void> {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
     const { error: purgeError } = await supabase
-      .from('scraped_jobs')
+      .from(TABLES.scrapedJobs)
       .delete()
       .eq('status', 'archived')
       .lt('created_at', thirtyDaysAgo);
@@ -43,21 +43,21 @@ export async function runMaintenance(): Promise<void> {
     const aiUsage = await getTotalUsageToday();
 
     const { count: totalJobs } = await supabase
-      .from('scraped_jobs')
+      .from(TABLES.scrapedJobs)
       .select('id', { count: 'exact', head: true });
 
     const { count: newJobs } = await supabase
-      .from('scraped_jobs')
+      .from(TABLES.scrapedJobs)
       .select('id', { count: 'exact', head: true })
       .eq('status', 'new');
 
     const { count: analyzedJobs } = await supabase
-      .from('scraped_jobs')
+      .from(TABLES.scrapedJobs)
       .select('id', { count: 'exact', head: true })
       .eq('status', 'analyzed');
 
     const { count: archivedCount } = await supabase
-      .from('scraped_jobs')
+      .from(TABLES.scrapedJobs)
       .select('id', { count: 'exact', head: true })
       .eq('status', 'archived');
 

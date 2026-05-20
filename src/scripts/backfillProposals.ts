@@ -1,4 +1,4 @@
-import { supabase } from '../config/db';
+import { supabase, TABLES } from '../config/db';
 import { generateProposal } from '../ai/proposalGenerator';
 import { notifyTelegram } from '../telegram/notifier';
 import { agentConfig } from '../config/agentConfig';
@@ -6,7 +6,7 @@ import { agentConfig } from '../config/agentConfig';
 async function main() {
   console.log('=== Backfilling Proposals ===\n');
   const { data: jobs, error } = await supabase
-    .from('scraped_jobs')
+    .from(TABLES.scrapedJobs)
     .select('id, title, description, platform, budget, client_name, ai_score, ai_project_type, ai_tech_stack, ai_client_pain_points, ai_budget_suitability, ai_estimated_effort, ai_summary_ar, ai_recommended_sales_angle')
     .gte('ai_score', agentConfig.scoring.proposalMinScore)
     .is('ai_proposal_text', null)
@@ -32,7 +32,7 @@ async function main() {
     try {
       const proposal = await generateProposal(job, analysis);
       if (!proposal) { console.log(`  Skipped (models exhausted): ${job.title.slice(0,60)}`); break; }
-      await supabase.from('scraped_jobs').update({
+      await supabase.from(TABLES.scrapedJobs).update({
         ai_proposal_text: proposal,
         ai_proposal_generated_at: new Date().toISOString(),
       }).eq('id', job.id);

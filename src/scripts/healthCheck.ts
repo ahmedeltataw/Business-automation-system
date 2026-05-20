@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Redis } from 'ioredis';
 import { Bot } from 'grammy';
 import { env } from '../config/env';
+import { TABLES } from '../config/tables';
 
 const BOLD = '\x1b[1m';
 const GREEN = '\x1b[32m';
@@ -24,14 +25,14 @@ function header(text: string) {
 async function checkSupabase() {
   try {
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-      const { error } = await supabase.from('scraped_jobs').select('id').limit(1);
+      const { error } = await supabase.from(TABLES.scrapedJobs).select('id').limit(1);
     const tableMissing = error?.message?.includes('Could not find the table') || error?.message?.includes('does not exist');
     if (tableMissing) {
-      log('Supabase', true, 'Connected. scraped_jobs table needs SQL schema creation.');
+      log('Supabase', true, `${TABLES.scrapedJobs} table needs SQL schema creation.`);
       return true;
     }
     if (error) throw error;
-    log('Supabase', true, 'Connected. scraped_jobs table is ready.');
+    log('Supabase', true, `${TABLES.scrapedJobs} table is ready.`);
     return true;
   } catch (err: any) {
     log('Supabase', false, err.message ?? String(err));

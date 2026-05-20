@@ -27,6 +27,8 @@ from schemas import LeadScoreResult, ProposalResult, JobRecord
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+TABLE_PREFIX = os.environ.get('SUPABASE_TABLE_PREFIX', '')
+TABLE_SCRAPED_JOBS = f'{TABLE_PREFIX}scraped_jobs'
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     print('[ERROR] Missing SUPABASE_URL or SUPABASE_SERVICE_KEY')
@@ -51,7 +53,7 @@ SYSTEM_PROPOSAL = (
 
 def fetch_pending_jobs(limit: int = 10) -> list[dict]:
     response = (
-        supabase.table('scraped_jobs')
+        supabase.table(TABLE_SCRAPED_JOBS)
         .select('*')
         .eq('ai_lead_score_warning', 'true')
         .order('created_at', desc=True)
@@ -62,14 +64,14 @@ def fetch_pending_jobs(limit: int = 10) -> list[dict]:
 
 
 def mark_processing(job_id: str):
-    supabase.table('scraped_jobs').update({
+    supabase.table(TABLE_SCRAPED_JOBS).update({
         'ai_lead_score_warning': False,
         'updated_at': datetime.now(timezone.utc).isoformat(),
     }).eq('id', job_id).execute()
 
 
 def update_job_score(job_id: str, score_result: LeadScoreResult):
-    supabase.table('scraped_jobs').update({
+    supabase.table(TABLE_SCRAPED_JOBS).update({
         'ai_score': int(score_result.score),
         'ai_project_type': score_result.project_type,
         'ai_tech_stack': json.dumps(score_result.tech_stack),
@@ -81,7 +83,7 @@ def update_job_score(job_id: str, score_result: LeadScoreResult):
 
 
 def update_proposal(job_id: str, proposal_result: ProposalResult):
-    supabase.table('scraped_jobs').update({
+    supabase.table(TABLE_SCRAPED_JOBS).update({
         'ai_proposal_text': proposal_result.proposal,
         'ai_estimated_effort': json.dumps(proposal_result.highlights),
         'ai_proposal_generated_at': datetime.now(timezone.utc).isoformat(),
