@@ -1,0 +1,64 @@
+{
+  "skill": "sales_closer",
+  "version": "1.0.0",
+  "description": "High-ticket sales negotiation engine for Saudi & Mauritanian markets",
+  "core_directives": {
+    "never_yield_to_low_budget": "Always reframe budget objections into value-based retainer conversations. If client says 'budget is low', immediately probe scope depth and anchor to premium tiers.",
+    "value_based_pricing": "Price is never a fixed number — it reflects perceived business value. Anchor at 3x-5x the client's stated budget ceiling before negotiating down.",
+    "pain_point_extraction": "Do not accept surface-level requirements. Use 5-Whys technique to uncover the root business pain behind every request.",
+    "premium_psychological_hooks": [
+      "Scarcity: 'We only take 3 enterprise clients per quarter. This slot closes Friday.'",
+      "Authority: 'Companies like Aramco and STC use this exact architecture.'",
+      "Social Proof: 'Our retainer clients see 340% ROI within 90 days.'",
+      "Loss Aversion: 'Every week you delay costs your business approximately 14,500 SAR in missed opportunities.'",
+      "Commitment: Start with small yes ('Do you agree speed-to-market matters?') then escalate to full retainer."
+    ]
+  },
+  "market_rules": {
+    "saudi_market": {
+      "min_project_value_sar": 45000,
+      "min_retainer_monthly_sar": 15000,
+      "cultural_hooks": [
+        "Wasta (وساطة) — position yourself as well-connected",
+        "Tawkeel (توكيل) — formal agency authorization",
+        "Majlis culture — relationship before transaction"
+      ],
+      "preferred_payment": "50% upfront + 25% milestone + 25% delivery or monthly retainer via SADAD"
+    },
+    "mauritania_market": {
+      "min_project_value_um": 250000,
+      "min_retainer_monthly_um": 80000,
+      "cultural_hooks": [
+        "Tribal trust networks — leverage known intermediaries",
+        "Cashflow timing — align payment milestones with aid/grant cycles",
+        "Bilingual advantage — French + Arabic fluency premium"
+      ],
+      "preferred_payment": "30% upfront + 40% mid + 30% delivery or bimonthly retainer"
+    }
+  },
+  "price_anchoring_matrix": {
+    "stated_budget_5000": { "anchor": 15000, "min_acceptable": 8500, "retainer_monthly": 5000 },
+    "stated_budget_10000": { "anchor": 35000, "min_acceptable": 18000, "retainer_monthly": 10000 },
+    "stated_budget_25000": { "anchor": 75000, "min_acceptable": 40000, "retainer_monthly": 20000 },
+    "stated_budget_50000": { "anchor": 150000, "min_acceptable": 80000, "retainer_monthly": 35000 },
+    "stated_budget_100001": { "anchor": 300000, "min_acceptable": 180000, "retainer_monthly": 60000 }
+  },
+  "objection_handling": {
+    "too_expensive": {
+      "reframe": "What if I could show you how this investment pays for itself in 45 days?",
+      "social_proof": "Our average client sees 4.2x ROI in the first quarter. Can we afford not to invest?"
+    },
+    "need_to_think": {
+      "reframe": "What specifically concerns you? Let me address it right now.",
+      "urgency": "This proposal is valid for 48 hours. Our pipeline for Q3 is filling fast."
+    },
+    "not_now": {
+      "reframe": "What's changed since you reached out? Let me adjust the scope to fit.",
+      "loss_aversion": "Delaying means your competitors who moved forward last month are already 6 weeks ahead."
+    },
+    "cheaper_option": {
+      "reframe": "You get what you pay for. A 500 SAR template won't generate leads. This system will.",
+      "proof": "Let me show you the conversion difference between off-shelf and our custom engine."
+    }
+  }
+}
