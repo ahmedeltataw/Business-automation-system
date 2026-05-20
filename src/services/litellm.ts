@@ -11,40 +11,57 @@ export interface ModelAlias {
   models: string[];
 }
 
+// FreeLLMAPI unified proxy — single key, 9 providers
+const FREELLM_API_URL = process.env.FREELLM_API_URL || 'https://free.llm-api.com/v1';
+const FREELLM_API_KEY = process.env.FREELLM_API_KEY;
+
 const ALIASES: Record<string, ModelAlias> = {
   'free-lead-scorer': {
     name: 'free-lead-scorer',
     models: [
-      'gemini-2.0-flash',
-      'gemini-2.0-flash:key2',
-      'groq/llama-3.1-8b-instant',
-      'groq/llama-3.1-8b-instant:key2',
-      'cloudflare/@cf/meta/llama-3.1-8b-instruct',
-      'openrouter/google/gemma-4-26b-a4b-it:free',
-      'openrouter/meta-llama/llama-3.3-70b-instruct:free',
+      // Tier 1 — Core (highest quality)
+      'free-llm/gemini-2.5-flash',
+      'free-llm/groq/llama-3.3-70b-versatile',
+      'free-llm/deepseek-chat',
+      // Tier 2 — Ultra-Fast & Edge
+      'free-llm/cerebras/qwen3-235b-a22b',
+      'free-llm/sambanova/llama-4-scout',
+      'free-llm/cloudflare/kimi-k2.6',
+      // Tier 3 — Premium Heavy Fallbacks
+      'free-llm/github/gpt-4o',
+      'free-llm/zhipu/glm-4.7-flash',
+      'free-llm/cohere/command-r-plus',
     ],
   },
   'free-proposal-generator': {
     name: 'free-proposal-generator',
     models: [
-      'gemini-2.0-flash',
-      'gemini-2.0-flash:key2',
-      'openrouter/google/gemma-4-31b-it:free',
-      'openrouter/deepseek/deepseek-v4-flash:free',
-      'groq/llama-3.3-70b-versatile',
-      'groq/llama-3.3-70b-versatile:key2',
-      'cloudflare/@cf/meta/llama-3.3-70b-instruct',
+      // Tier 1 — Core (best for creative Arabic text)
+      'free-llm/gemini-2.5-flash',
+      'free-llm/deepseek-chat',
+      'free-llm/groq/llama-3.3-70b-versatile',
+      // Tier 2 — Ultra-Fast & Edge
+      'free-llm/cerebras/qwen3-235b-a22b',
+      'free-llm/sambanova/llama-4-scout',
+      'free-llm/cloudflare/kimi-k2.6',
+      // Tier 3 — Premium Heavy Fallbacks
+      'free-llm/github/gpt-4o',
+      'free-llm/zhipu/glm-4.7-flash',
+      'free-llm/cohere/command-r-plus',
     ],
   },
   'free-backup-agent': {
     name: 'free-backup-agent',
     models: [
-      'gemini-2.0-flash',
-      'gemini-2.0-flash:key2',
-      'groq/llama-3.1-8b-instant',
-      'groq/llama-3.1-8b-instant:key2',
-      'openrouter/google/gemma-4-26b-a4b-it:free',
-      'hf/meta-llama/Llama-3.3-70B-Instruct',
+      'free-llm/gemini-2.5-flash',
+      'free-llm/groq/llama-3.3-70b-versatile',
+      'free-llm/deepseek-chat',
+      'free-llm/cerebras/qwen3-235b-a22b',
+      'free-llm/sambanova/llama-4-scout',
+      'free-llm/cloudflare/kimi-k2.6',
+      'free-llm/github/gpt-4o',
+      'free-llm/zhipu/glm-4.7-flash',
+      'free-llm/cohere/command-r-plus',
     ],
   },
   'lead-scorer': {
@@ -183,6 +200,9 @@ class LiteLLMGateway {
   ): Promise<AIResponse> {
     const startTime = Date.now();
 
+    if (model.startsWith('free-llm/')) {
+      return this.callFreeLLM(model, messages, startTime);
+    }
     if (model.startsWith('cloudflare/')) {
       return this.callCloudflare(model, messages, startTime);
     }
@@ -203,6 +223,55 @@ class LiteLLMGateway {
     }
 
     throw new Error(`LiteLLM: unsupported provider prefix for model "${model}"`);
+  }
+
+  private async callFreeLLM(
+    model: string,
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+    startTime: number
+  ): Promise<AIResponse> {
+    if (!FREELLM_API_KEY) {
+      throw new Error('FreeLLMAPI: missing FREELLM_API_KEY');
+    }
+
+    const modelName = model.replace('free-llm/', '');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+
+    try {
+      const response = await fetch(`${FREELLM_API_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${FREELLM_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages,
+          max_tokens: 2000,
+          temperature: 0.7,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errBody = await response.text().catch(() => '');
+        throw new Error(`FreeLLMAPI HTTP ${response.status}: ${errBody.slice(0, 300)}`);
+      }
+
+      const data: any = await response.json();
+      const text = data.choices?.[0]?.message?.content?.trim() ?? '';
+      const tokens = data.usage?.total_tokens ?? Math.round(text.split(/\s+/).length * 1.3);
+      const duration = Date.now() - startTime;
+      console.log(`[LiteLLM] free-llm/${modelName} | ${tokens} tokens | ${duration}ms`);
+
+      return { text, tokensUsed: tokens, modelUsed: `free-llm/${modelName}` };
+    } catch (err: any) {
+      clearTimeout(timeout);
+      throw err;
+    }
   }
 
   private async callCloudflare(

@@ -16,30 +16,53 @@ if not os.environ.get('GEMINI_API_KEY'):
 
 T = TypeVar('T', bound=BaseModel)
 
+# FreeLLMAPI unified proxy — OpenAI-compatible endpoint
+# All models route through one API key with different model identifiers
+FREELLM_API_URL = os.environ.get('FREELLM_API_URL', 'https://free.llm-api.com/v1')
+FREELLM_API_KEY = os.environ.get('FREELLM_API_KEY')
+
+# Mega-fallback cascade: 3 tiers, 9 providers, 20-attempt cycle
 ALIASES = {
     'free-lead-scorer': [
-        'gemini/gemini-2.0-flash',
-        'groq/llama-3.1-8b-instant',
-        'openrouter/google/gemma-4-26b-a4b-it:free',
-        'openrouter/meta-llama/llama-3.3-70b-instruct:free',
+        # Tier 1 — Core (highest quality)
+        'free-llm/gemini-2.5-flash',
+        'free-llm/groq/llama-3.3-70b-versatile',
+        'free-llm/deepseek-chat',
+        # Tier 2 — Ultra-Fast & Edge
+        'free-llm/cerebras/qwen3-235b-a22b',
+        'free-llm/sambanova/llama-4-scout',
+        'free-llm/cloudflare/kimi-k2.6',
+        # Tier 3 — Premium Heavy Fallbacks
+        'free-llm/github/gpt-4o',
+        'free-llm/zhipu/glm-4.7-flash',
+        'free-llm/cohere/command-r-plus',
     ],
     'free-proposal-generator': [
-        'gemini/gemini-2.0-flash',
-        'openrouter/google/gemma-4-31b-it:free',
-        'openrouter/deepseek/deepseek-v4-flash:free',
-        'groq/llama-3.3-70b-versatile',
-        'cloudflare/@cf/meta/llama-3.3-70b-instruct',
+        # Tier 1 — Core (best for creative Arabic text)
+        'free-llm/gemini-2.5-flash',
+        'free-llm/deepseek-chat',
+        'free-llm/groq/llama-3.3-70b-versatile',
+        # Tier 2 — Ultra-Fast & Edge
+        'free-llm/cerebras/qwen3-235b-a22b',
+        'free-llm/sambanova/llama-4-scout',
+        'free-llm/cloudflare/kimi-k2.6',
+        # Tier 3 — Premium Heavy Fallbacks
+        'free-llm/github/gpt-4o',
+        'free-llm/zhipu/glm-4.7-flash',
+        'free-llm/cohere/command-r-plus',
     ],
     'free-backup-agent': [
-        'gemini/gemini-2.0-flash',
-        'groq/llama-3.1-8b-instant',
-        'openrouter/google/gemma-4-26b-a4b-it:free',
-        'huggingface/meta-llama/Llama-3.3-70B-Instruct',
+        'free-llm/gemini-2.5-flash',
+        'free-llm/groq/llama-3.3-70b-versatile',
+        'free-llm/deepseek-chat',
+        'free-llm/cerebras/qwen3-235b-a22b',
+        'free-llm/sambanova/llama-4-scout',
+        'free-llm/cloudflare/kimi-k2.6',
+        'free-llm/github/gpt-4o',
+        'free-llm/zhipu/glm-4.7-flash',
+        'free-llm/cohere/command-r-plus',
     ],
 }
-
-COOLDOWN: dict[str, float] = {}
-COOLDOWN_SECONDS = 60
 
 
 def _resolve_models(alias: str) -> list[str]:
@@ -62,6 +85,10 @@ def _set_cooldown(model: str):
 
 
 def _get_api_key(model: str) -> str | None:
+    # All FreeLLMAPI models use the same API key
+    if model.startswith('free-llm/'):
+        return FREELLM_API_KEY
+    # Fallback: direct provider keys (legacy support)
     base = model.split(':')[0].split('/')[-1]
     if model.startswith('gemini/') or 'gemini' in model.lower() or 'gemma' in model.lower():
         return os.environ.get('GEMINI_API_KEY')
@@ -116,7 +143,7 @@ def call(alias: str, prompt: str, system_prompt: str = '', response_model: Type[
 
             try:
                 kwargs = {
-                    'model': model,
+                    'model': model.replace('free-llm/', ''),
                     'messages': messages,
                     'temperature': 0.7,
                     'max_tokens': 2000,
@@ -126,6 +153,10 @@ def call(alias: str, prompt: str, system_prompt: str = '', response_model: Type[
                     kwargs['response_format'] = {
                         'type': 'json_object',
                     }
+
+                # FreeLLMAPI uses OpenAI-compatible endpoint
+                if model.startswith('free-llm/'):
+                    kwargs['api_base'] = FREELLM_API_URL
 
                 import time
                 start = time.time()
