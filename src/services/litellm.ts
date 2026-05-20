@@ -1,9 +1,9 @@
 /**
  * LiteLLM Unified AI Gateway
  *
- * Central routing layer for all AI providers (FreeLLMAPI, Cloudflare, Gemini,
+ * Central routing layer for all AI providers (Cloudflare, Gemini,
  * Groq, DeepSeek, Hugging Face, OpenRouter). Resolves functional aliases
- * (e.g. 'free-lead-scorer') to provider-specific model chains with automatic
+ * to provider-specific model chains with automatic
  * fallback, per-model cooldown, and schema-constrained JSON generation.
  */
 
@@ -22,59 +22,7 @@ export interface ModelAlias {
   models: string[];
 }
 
-// FreeLLMAPI unified proxy — single key, 9 providers
-const FREELLM_API_URL = env.FREELLM_API_URL || 'http://localhost:3001/v1';
-const FREELLM_API_KEY = env.FREELLM_API_KEY;
-
 const ALIASES: Record<string, ModelAlias> = {
-  'free-lead-scorer': {
-    name: 'free-lead-scorer',
-    models: [
-      // Tier 1 — Core (highest quality)
-      'free-llm/gemini-2.5-flash',
-      'free-llm/groq/llama-3.3-70b-versatile',
-      'free-llm/deepseek-chat',
-      // Tier 2 — Ultra-Fast & Edge
-      'free-llm/cerebras/qwen3-235b-a22b',
-      'free-llm/sambanova/llama-4-scout',
-      'free-llm/cloudflare/kimi-k2.6',
-      // Tier 3 — Premium Heavy Fallbacks
-      'free-llm/github/gpt-4o',
-      'free-llm/zhipu/glm-4.7-flash',
-      'free-llm/cohere/command-r-plus',
-    ],
-  },
-  'free-proposal-generator': {
-    name: 'free-proposal-generator',
-    models: [
-      // Tier 1 — Core (best for creative Arabic text)
-      'free-llm/gemini-2.5-flash',
-      'free-llm/deepseek-chat',
-      'free-llm/groq/llama-3.3-70b-versatile',
-      // Tier 2 — Ultra-Fast & Edge
-      'free-llm/cerebras/qwen3-235b-a22b',
-      'free-llm/sambanova/llama-4-scout',
-      'free-llm/cloudflare/kimi-k2.6',
-      // Tier 3 — Premium Heavy Fallbacks
-      'free-llm/github/gpt-4o',
-      'free-llm/zhipu/glm-4.7-flash',
-      'free-llm/cohere/command-r-plus',
-    ],
-  },
-  'free-backup-agent': {
-    name: 'free-backup-agent',
-    models: [
-      'free-llm/gemini-2.5-flash',
-      'free-llm/groq/llama-3.3-70b-versatile',
-      'free-llm/deepseek-chat',
-      'free-llm/cerebras/qwen3-235b-a22b',
-      'free-llm/sambanova/llama-4-scout',
-      'free-llm/cloudflare/kimi-k2.6',
-      'free-llm/github/gpt-4o',
-      'free-llm/zhipu/glm-4.7-flash',
-      'free-llm/cohere/command-r-plus',
-    ],
-  },
   'lead-scorer': {
     name: 'lead-scorer',
     models: [
@@ -211,9 +159,6 @@ class LiteLLMGateway {
   ): Promise<AIResponse> {
     const startTime = Date.now();
 
-    if (model.startsWith('free-llm/')) {
-      return this.callFreeLLM(model, messages, startTime);
-    }
     if (model.startsWith('cloudflare/')) {
       return this.callCloudflare(model, messages, startTime);
     }
@@ -234,77 +179,6 @@ class LiteLLMGateway {
     }
 
     throw new Error(`LiteLLM: unsupported provider prefix for model "${model}"`);
-  }
-
-  private async callFreeLLM(
-    model: string,
-    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
-    startTime: number
-  ): Promise<AIResponse> {
-    if (!FREELLM_API_KEY) {
-      throw new Error('FreeLLMAPI: missing FREELLM_API_KEY');
-    }
-
-    const modelName = model.replace('free-llm/', '');
-
-    // CI guard — only on GitHub Actions with a localhost-only URL (no real proxy available)
-    if (process.env.GITHUB_ACTIONS === 'true' && FREELLM_API_URL.includes('localhost')) {
-      console.log(`[LiteLLM] CI mode — mock response for free-llm/${modelName}`);
-      return {
-        text: JSON.stringify({
-          score: 0,
-          is_relevant: false,
-          project_type: 'Irrelevant',
-          tech_stack: [],
-          client_pain_points: [],
-          budget_suitability: 'Medium',
-          estimated_effort: 'Medium',
-          summary_ar: 'تحليل آلي (CI)',
-          recommended_sales_angle: '',
-          tailoredArabicProposal: '',
-        }),
-        tokensUsed: 0,
-        modelUsed: `free-llm/${modelName}`,
-      };
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
-
-    try {
-      const response = await fetch(`${FREELLM_API_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${FREELLM_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: modelName,
-          messages,
-          max_tokens: 2000,
-          temperature: 0.7,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        const errBody = await response.text().catch(() => '');
-        throw new Error(`FreeLLMAPI HTTP ${response.status}: ${errBody.slice(0, 300)}`);
-      }
-
-      const data: any = await response.json();
-      const text = data.choices?.[0]?.message?.content?.trim() ?? '';
-      const tokens = data.usage?.total_tokens ?? Math.round(text.split(/\s+/).length * 1.3);
-      const duration = Date.now() - startTime;
-      console.log(`[LiteLLM] free-llm/${modelName} | ${tokens} tokens | ${duration}ms`);
-
-      return { text, tokensUsed: tokens, modelUsed: `free-llm/${modelName}` };
-    } catch (err: any) {
-      clearTimeout(timeout);
-      throw err;
-    }
   }
 
   private async callCloudflare(

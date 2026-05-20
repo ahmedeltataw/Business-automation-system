@@ -1,11 +1,9 @@
 """
 AI Router — LiteLLM Unified Gateway
 
-Routes AI prompts through a multi-provider cascade (FreeLLMAPI, Gemini, Groq,
+Routes AI prompts through a multi-provider cascade (Gemini, Groq,
 OpenRouter, Cloudflare, Hugging Face) with automatic fallback, per-model
 cooldown, and Pydantic response validation.
-
-All models share a single FreeLLMAPI key with different model identifiers.
 """
 
 import json
@@ -35,52 +33,25 @@ T = TypeVar("T", bound=BaseModel)
 # Configuration
 # ---------------------------------------------------------------------------
 
-FREELLM_API_URL = os.environ.get("FREELLM_API_URL", "https://free.llm-api.com/v1")
-FREELLM_API_KEY = os.environ.get("FREELLM_API_KEY")
-
 COOLDOWN: dict[str, float] = {}
 COOLDOWN_SECONDS: float = 60.0
 
 # Functional alias → ordered model cascade (tiered fallback)
 ALIASES: dict[str, list[str]] = {
-    "free-lead-scorer": [
-        # Tier 1 — Core (highest quality)
-        "free-llm/gemini-2.5-flash",
-        "free-llm/groq/llama-3.3-70b-versatile",
-        "free-llm/deepseek-chat",
-        # Tier 2 — Ultra-Fast & Edge
-        "free-llm/cerebras/qwen3-235b-a22b",
-        "free-llm/sambanova/llama-4-scout",
-        "free-llm/cloudflare/kimi-k2.6",
-        # Tier 3 — Premium Heavy Fallbacks
-        "free-llm/github/gpt-4o",
-        "free-llm/zhipu/glm-4.7-flash",
-        "free-llm/cohere/command-r-plus",
+    "lead-scorer": [
+        "cloudflare/@cf/meta/llama-3.1-8b-instruct",
+        "gemini/gemini-2.5-flash",
+        "groq/llama3-8b-8192",
     ],
-    "free-proposal-generator": [
-        # Tier 1 — Core (best for creative Arabic text)
-        "free-llm/gemini-2.5-flash",
-        "free-llm/deepseek-chat",
-        "free-llm/groq/llama-3.3-70b-versatile",
-        # Tier 2 — Ultra-Fast & Edge
-        "free-llm/cerebras/qwen3-235b-a22b",
-        "free-llm/sambanova/llama-4-scout",
-        "free-llm/cloudflare/kimi-k2.6",
-        # Tier 3 — Premium Heavy Fallbacks
-        "free-llm/github/gpt-4o",
-        "free-llm/zhipu/glm-4.7-flash",
-        "free-llm/cohere/command-r-plus",
+    "proposal-generator": [
+        "gemini/gemini-2.5-flash",
+        "cloudflare/@cf/meta/llama-3.3-70b-instruct",
+        "groq/llama-3.3-70b-versatile",
     ],
-    "free-backup-agent": [
-        "free-llm/gemini-2.5-flash",
-        "free-llm/groq/llama-3.3-70b-versatile",
-        "free-llm/deepseek-chat",
-        "free-llm/cerebras/qwen3-235b-a22b",
-        "free-llm/sambanova/llama-4-scout",
-        "free-llm/cloudflare/kimi-k2.6",
-        "free-llm/github/gpt-4o",
-        "free-llm/zhipu/glm-4.7-flash",
-        "free-llm/cohere/command-r-plus",
+    "backup-agent": [
+        "gemini/gemini-2.5-flash",
+        "groq/llama-3.3-70b-versatile",
+        "hf/meta-llama/Llama-3.3-70B-Instruct",
     ],
 }
 
@@ -111,8 +82,6 @@ def _set_cooldown(model: str) -> None:
 
 def _get_api_key(model: str) -> str | None:
     """Resolve the correct API key for a model based on its provider prefix."""
-    if model.startswith("free-llm/"):
-        return FREELLM_API_KEY
     base = model.split(":")[0].split("/")[-1]
     if model.startswith("gemini/") or "gemini" in model.lower() or "gemma" in model.lower():
         return os.environ.get("GEMINI_API_KEY")
@@ -162,7 +131,7 @@ def call(
     Pydantic model before returning.
 
     Args:
-        alias: Functional alias name (e.g. 'free-lead-scorer')
+        alias: Functional alias name (e.g. 'lead-scorer')
         prompt: User prompt text
         system_prompt: Optional system instruction
         response_model: Pydantic model for structured response validation
@@ -199,7 +168,7 @@ def call(
 
             try:
                 kwargs = {
-                    "model": model.replace("free-llm/", ""),
+                    "model": model,
                     "messages": messages,
                     "temperature": 0.7,
                     "max_tokens": 2000,
@@ -207,9 +176,6 @@ def call(
 
                 if response_model:
                     kwargs["response_format"] = {"type": "json_object"}
-
-                if model.startswith("free-llm/"):
-                    kwargs["api_base"] = FREELLM_API_URL
 
                 start = time.time()
                 resp = completion(**kwargs)

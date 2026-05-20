@@ -69,7 +69,7 @@ Return a JSON object with these fields:
   "summary": "One-sentence description of what the client needs"
 }`;
 
-  const result: AIResponse = await litellm.call('free-lead-scorer', prompt, systemPrompt);
+  const result: AIResponse = await litellm.call('lead-scorer', prompt, systemPrompt);
   return JSON.parse(result.text) as JobAnalysis;
 }
 
@@ -96,7 +96,7 @@ Return a JSON object:
   "reasoning": "Why this action was chosen"
 }`;
 
-  const result: AIResponse = await litellm.call('free-proposal-generator', prompt, systemPrompt);
+  const result: AIResponse = await litellm.call('proposal-generator', prompt, systemPrompt);
   return JSON.parse(result.text) as ActionStrategy;
 }
 

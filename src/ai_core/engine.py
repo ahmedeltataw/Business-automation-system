@@ -166,7 +166,7 @@ def process_job(job: dict) -> dict:
 
     try:
         score_result = call(
-            "free-lead-scorer",
+            "lead-scorer",
             f"Analyze this job:\n{context}",
             SYSTEM_SCORER,
             response_model=LeadScoreResult,
@@ -185,7 +185,7 @@ def process_job(job: dict) -> dict:
 
     try:
         proposal_result = call(
-            "free-proposal-generator",
+            "proposal-generator",
             f"Write a proposal for this job:\n{context}",
             SYSTEM_PROPOSAL,
             response_model=ProposalResult,
