@@ -15,21 +15,22 @@ const ALIASES: Record<string, ModelAlias> = {
   'free-lead-scorer': {
     name: 'free-lead-scorer',
     models: [
-      'gemini-1.5-flash',
-      'gemini-1.5-flash:key2',
-      'groq/llama3-8b-8192',
-      'groq/llama3-8b-8192:key2',
+      'gemini-2.0-flash',
+      'gemini-2.0-flash:key2',
+      'groq/llama-3.1-8b-instant',
+      'groq/llama-3.1-8b-instant:key2',
       'cloudflare/@cf/meta/llama-3.1-8b-instruct',
-      'openrouter/google/gemma-2-9b-it:free',
-      'openrouter/meta-llama/llama-3-8b-instruct:free',
+      'openrouter/google/gemma-4-26b-a4b-it:free',
+      'openrouter/meta-llama/llama-3.3-70b-instruct:free',
     ],
   },
   'free-proposal-generator': {
     name: 'free-proposal-generator',
     models: [
-      'gemini-1.5-flash',
-      'gemini-1.5-flash:key2',
-      'openrouter/google/gemini-flash-1.5',
+      'gemini-2.0-flash',
+      'gemini-2.0-flash:key2',
+      'openrouter/google/gemma-4-31b-it:free',
+      'openrouter/deepseek/deepseek-v4-flash:free',
       'groq/llama-3.3-70b-versatile',
       'groq/llama-3.3-70b-versatile:key2',
       'cloudflare/@cf/meta/llama-3.3-70b-instruct',
@@ -38,11 +39,11 @@ const ALIASES: Record<string, ModelAlias> = {
   'free-backup-agent': {
     name: 'free-backup-agent',
     models: [
-      'gemini-1.5-flash',
-      'gemini-1.5-flash:key2',
-      'groq/llama3-8b-8192',
-      'groq/llama3-8b-8192:key2',
-      'openrouter/google/gemma-2-9b-it:free',
+      'gemini-2.0-flash',
+      'gemini-2.0-flash:key2',
+      'groq/llama-3.1-8b-instant',
+      'groq/llama-3.1-8b-instant:key2',
+      'openrouter/google/gemma-4-26b-a4b-it:free',
       'hf/meta-llama/Llama-3.3-70B-Instruct',
     ],
   },
@@ -110,10 +111,15 @@ class LiteLLMGateway {
           err.message?.includes('rate limit') ||
           err.message?.includes('RESOURCE_EXHAUSTED') ||
           err.message?.includes('quota');
+        const isMissingKey = err.message?.includes('not set') || err.message?.includes('missing');
 
         if (isRateLimit) {
           console.log(`[LiteLLM] ${model} rate limited, entering cooldown`);
           COOLDOWN_MS[model] = Date.now() + COOLDOWN_DURATION;
+          continue;
+        }
+        if (isMissingKey) {
+          console.log(`[LiteLLM] ${model} skipped (key not configured), trying next`);
           continue;
         }
 
@@ -257,7 +263,10 @@ class LiteLLMGateway {
     const { GoogleGenAI } = await import('@google/genai');
     const useKey2 = model.endsWith(':key2');
     const apiKey = useKey2 ? env.GEMINI_API_KEY_2 : env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error(`Gemini: missing ${useKey2 ? 'GEMINI_API_KEY_2' : 'GEMINI_API_KEY'}`);
+    if (!apiKey) {
+      console.log(`[LiteLLM] ${model} skipped — ${useKey2 ? 'GEMINI_API_KEY_2' : 'GEMINI_API_KEY'} not set`);
+      throw new Error(`Gemini: missing ${useKey2 ? 'GEMINI_API_KEY_2' : 'GEMINI_API_KEY'}`);
+    }
 
     const modelName = model.replace(':key2', '');
     const client = new GoogleGenAI({ apiKey });
@@ -304,7 +313,10 @@ class LiteLLMGateway {
     const { Groq } = await import('groq-sdk');
     const useKey2 = model.endsWith(':key2');
     const apiKey = useKey2 ? env.GROQ_API_KEY_2 : env.GROQ_API_KEY;
-    if (!apiKey) throw new Error(`Groq: missing ${useKey2 ? 'GROQ_API_KEY_2' : 'GROQ_API_KEY'}`);
+    if (!apiKey) {
+      console.log(`[LiteLLM] ${model} skipped — ${useKey2 ? 'GROQ_API_KEY_2' : 'GROQ_API_KEY'} not set`);
+      throw new Error(`Groq: missing ${useKey2 ? 'GROQ_API_KEY_2' : 'GROQ_API_KEY'}`);
+    }
 
     const modelName = model.replace(':key2', '').replace('groq/', '');
     const client = new Groq({ apiKey });

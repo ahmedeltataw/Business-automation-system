@@ -7,8 +7,10 @@ const MODEL_LIMITS: Record<string, number> = {
   'gemini-2.0-flash': 0,
   'gemini-2.5-pro': 25,
   'gemini-1.5-flash': 1500,
+  'gemini-2.0-flash': 1500,
   'groq/llama-3-70b': 999999,
   'groq/llama3-8b-8192': 999999,
+  'groq/llama-3.1-8b-instant': 999999,
   'groq/llama-3.3-70b-versatile': 999999,
   'hf/meta-llama/Llama-3.3-70B-Instruct': 500,
   'hf/deepseek-ai/DeepSeek-V3': 500,
@@ -19,6 +21,11 @@ const MODEL_LIMITS: Record<string, number> = {
   'openrouter/google/gemma-2-9b-it:free': 999999,
   'openrouter/meta-llama/llama-3-8b-instruct:free': 999999,
   'openrouter/google/gemini-flash-1.5': 999999,
+  'openrouter/google/gemma-4-26b-a4b-it:free': 999999,
+  'openrouter/google/gemma-4-31b-it:free': 999999,
+  'openrouter/deepseek/deepseek-v4-flash:free': 999999,
+  'openrouter/meta-llama/llama-3.3-70b-instruct:free': 999999,
+  'openrouter/google/gemini-2.0-flash': 999999,
 };
 
 
@@ -108,8 +115,10 @@ export async function getUsageSummaryMessage(): Promise<string> {
     'gemini-2.0-flash': 'Gemini 2.0 Flash',
     'gemini-2.5-pro': 'Gemini 2.5 Pro',
     'gemini-1.5-flash': 'Gemini 1.5 Flash (Free)',
+    'gemini-2.0-flash': 'Gemini 2.0 Flash (Free)',
     'groq/llama-3-70b': 'Groq Llama-3',
     'groq/llama3-8b-8192': 'Groq Llama-3 8B (Free)',
+    'groq/llama-3.1-8b-instant': 'Groq Llama-3.1 8B (Free)',
     'groq/llama-3.3-70b-versatile': 'Groq Llama-3.3 70B (Free)',
     'hf/meta-llama/Llama-3.3-70B-Instruct': 'HF Llama-3.3',
     'hf/deepseek-ai/DeepSeek-V3': 'HF DeepSeek V3',
@@ -119,6 +128,10 @@ export async function getUsageSummaryMessage(): Promise<string> {
     'openrouter/google/gemma-2-9b-it:free': 'OR Gemma 2 9B (Free)',
     'openrouter/meta-llama/llama-3-8b-instruct:free': 'OR Llama-3 8B (Free)',
     'openrouter/google/gemini-flash-1.5': 'OR Gemini Flash 1.5',
+    'openrouter/google/gemma-4-26b-a4b-it:free': 'OR Gemma 4 26B (Free)',
+    'openrouter/google/gemma-4-31b-it:free': 'OR Gemma 4 31B (Free)',
+    'openrouter/deepseek/deepseek-v4-flash:free': 'OR DeepSeek V4 Flash (Free)',
+    'openrouter/meta-llama/llama-3.3-70b-instruct:free': 'OR Llama-3.3 70B (Free)',
   };
 
   const lines = ['📊 *تقرير استهلاك AI اليوم:*', ''];

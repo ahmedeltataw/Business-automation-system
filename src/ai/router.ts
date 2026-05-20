@@ -226,16 +226,16 @@ function validateAnalysis(parsed: any): asserts parsed is JobAnalysis {
 
 function extractJson(text: string): string {
   const codeMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeMatch) return codeMatch[1].trim();
+  if (codeMatch) return stripJsonComments(codeMatch[1].trim());
 
   const startIdx = text.indexOf('{');
-  if (startIdx === -1) return text.trim();
+  if (startIdx === -1) return stripJsonComments(text.trim());
 
   let endIdx = text.lastIndexOf('}');
-  if (endIdx === -1 || endIdx < startIdx) return text.trim();
+  if (endIdx === -1 || endIdx < startIdx) return stripJsonComments(text.trim());
 
   while (endIdx > startIdx) {
-    const candidate = text.substring(startIdx, endIdx + 1);
+    const candidate = stripJsonComments(text.substring(startIdx, endIdx + 1));
     try {
       JSON.parse(candidate);
       return candidate;
@@ -246,7 +246,13 @@ function extractJson(text: string): string {
     }
   }
 
-  return text.trim();
+  return stripJsonComments(text.trim());
+}
+
+function stripJsonComments(json: string): string {
+  return json
+    .replace(/\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
 export const aiRouter = new AIRouter();
