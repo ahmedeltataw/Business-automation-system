@@ -246,6 +246,28 @@ class LiteLLMGateway {
     }
 
     const modelName = model.replace('free-llm/', '');
+
+    // CI guard — no local FreeLLM proxy on the runner
+    if (process.env.GITHUB_ACTIONS) {
+      console.log(`[LiteLLM] CI mode — mock response for free-llm/${modelName}`);
+      return {
+        text: JSON.stringify({
+          score: 0,
+          is_relevant: false,
+          project_type: 'Irrelevant',
+          tech_stack: [],
+          client_pain_points: [],
+          budget_suitability: 'Medium',
+          estimated_effort: 'Medium',
+          summary_ar: 'تحليل آلي (CI)',
+          recommended_sales_angle: '',
+          tailoredArabicProposal: '',
+        }),
+        tokensUsed: 0,
+        modelUsed: `free-llm/${modelName}`,
+      };
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 45000);
 
