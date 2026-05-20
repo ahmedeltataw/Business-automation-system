@@ -1,5 +1,5 @@
 import { supabase } from '../config/db';
-import { aiRouter, AllModelsExhaustedError } from './router';
+import { aiRouter, AllModelsExhaustedError, JobMetadata } from './router';
 import { notifyTelegram } from '../telegram/notifier';
 import { agentConfig } from '../config/agentConfig';
 
@@ -18,7 +18,7 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
 
   const { data: jobs, error } = await supabase
     .from('scraped_jobs')
-    .select('id, title, description, platform, budget, url, external_id')
+    .select('id, title, description, platform, budget, url, external_id, proposals_count, client_hiring_rate, client_notes, execution_time')
     .eq('status', 'new')
     .limit(agentConfig.pipeline.batchSize);
 
@@ -56,7 +56,14 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
     const displayTitle = title.slice(0, 80);
 
     try {
-      const result = await aiRouter.analyzeJob(title, description);
+      const metadata: JobMetadata = {
+        platform: job.platform,
+        proposals_count: (job as any).proposals_count ?? undefined,
+        client_hiring_rate: (job as any).client_hiring_rate ?? undefined,
+        client_notes: (job as any).client_notes ?? undefined,
+        execution_time: (job as any).execution_time ?? undefined,
+      };
+      const result = await aiRouter.analyzeJob(title, description, metadata);
 
       const { error: updateError } = await supabase
         .from('scraped_jobs')
@@ -70,6 +77,7 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
           ai_estimated_effort: result.estimated_effort,
           ai_summary_ar: result.summary_ar,
           ai_recommended_sales_angle: result.recommended_sales_angle,
+          ai_lead_score_warning: result.lead_score_warning || null,
           ai_analyzed_at: new Date().toISOString(),
           status: 'analyzed',
           updated_at: new Date().toISOString(),
@@ -126,8 +134,8 @@ export async function runAnalysisPipeline(): Promise<{ analyzed: number; highSco
 }
 
 async function sendHighScoreAlert(
-  job: { id: string; title: string; description: string; platform: string; budget?: string; url?: string; external_id?: string },
-  analysis: { score: number; project_type: string; tech_stack: string[]; client_pain_points: string[]; budget_suitability: string; estimated_effort: string; summary_ar: string; recommended_sales_angle: string; tailoredArabicProposal?: string },
+  job: { id: string; title: string; description: string; platform: string; budget?: string; url?: string; external_id?: string; proposals_count?: number; client_hiring_rate?: string; execution_time?: string; client_notes?: string },
+  analysis: { score: number; project_type: string; tech_stack: string[]; client_pain_points: string[]; budget_suitability: string; estimated_effort: string; summary_ar: string; recommended_sales_angle: string; tailoredArabicProposal?: string; lead_score_warning?: string },
   proposal?: string | null
 ) {
   const platformIcon = PLATFORM_ICONS[job.platform] || job.platform;
@@ -153,6 +161,17 @@ async function sendHighScoreAlert(
     `*الملخص:* ${analysis.summary_ar}`,
   ];
 
+  // Metadata block
+  const metaParts: string[] = [];
+  if (job.execution_time) metaParts.push(`*المدة:* ${job.execution_time}`);
+  if (job.proposals_count !== undefined && job.proposals_count > 0) metaParts.push(`*عدد العروض:* ${job.proposals_count}`);
+  if (job.client_hiring_rate) metaParts.push(`*معدل التوظيف:* ${job.client_hiring_rate}`);
+  if (metaParts.length > 0) lines.splice(5, 0, ...metaParts);
+
+  if (analysis.lead_score_warning) {
+    lines.push(``, `⚠️ *تنبيه:* ${analysis.lead_score_warning}`);
+  }
+
   if (painPoints) {
     lines.push(`*نقاط الألم:* ${painPoints}`);
   }
@@ -165,6 +184,10 @@ async function sendHighScoreAlert(
     lines.push(``, `📝 *مسودة العرض المقترح:*`, `\`\`\`${proposal}\`\`\``);
   } else {
     lines.push(``, `*✍️ عرض السعر:* لم يتم إنشاؤه (لم يصل للحد الأدنى)`);
+  }
+
+  if (job.client_notes) {
+    lines.push(``, `📌 *ملاحظات العميل:* ${job.client_notes.slice(0, 200)}`);
   }
 
   lines.push(``, `[🔗 رابط المشروع](${url})`);

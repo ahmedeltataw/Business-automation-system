@@ -78,6 +78,7 @@ export const agentConfig = {
   scrapers: {
     navTimeout: 60000,
     humanDelay: { min: 800, max: 1500 },
+    maxEnrichPages: 10,
     platforms: {
       mostaql: { baseUrl: 'https://mostaql.com', projectsPath: '/projects', currency: 'USD' },
       khamsat: { baseUrl: 'https://khamsat.com', projectsPath: '/community/requests', currency: 'USD' },

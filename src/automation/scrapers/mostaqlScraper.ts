@@ -18,6 +18,8 @@ export interface MostaqlProject {
   client_name: string;
   client_country: string;
   proposals_count: number;
+  execution_time: string;
+  client_hiring_rate: string;
 }
 
 export async function scrapeMostaql(): Promise<MostaqlProject[]> {
@@ -98,9 +100,36 @@ export async function scrapeMostaql(): Promise<MostaqlProject[]> {
         client_name: raw.client_name,
         client_country: '',
         proposals_count: raw.proposals_count,
+        execution_time: '',
+        client_hiring_rate: '',
       };
 
       projects.push(project);
+    }
+
+    // Enrich top projects with detail-page metadata (execution_time, client_hiring_rate)
+    const enrichLimit = Math.min(projects.length, agentConfig.scrapers.maxEnrichPages ?? 10);
+    for (let i = 0; i < enrichLimit; i++) {
+      const p = projects[i];
+      if (!p.url) continue;
+      try {
+        await page.goto(p.url, { waitUntil: 'networkidle', timeout: agentConfig.scrapers.navTimeout });
+        await humanDelay(agentConfig.scrapers.humanDelay.min, agentConfig.scrapers.humanDelay.max);
+        const enriched = await page.evaluate(() => {
+          const sidebarEl = document.querySelector('.project-card');
+          const timeEl = sidebarEl?.querySelector('[class*="duration"], [class*="execution"], [class*="time"]');
+          const rateEl = document.querySelector('[class*="client"] [class*="rate"], [class*="client_rate"], [class*="rating"]');
+          return {
+            execution_time: timeEl?.textContent?.trim() ?? '',
+            client_hiring_rate: rateEl?.textContent?.trim() ?? '',
+          };
+        });
+        p.execution_time = enriched.execution_time;
+        p.client_hiring_rate = enriched.client_hiring_rate;
+        console.log(`  [mostaql] Enriched #${p.external_id}: exec=${enriched.execution_time} rate=${enriched.client_hiring_rate}`);
+      } catch (err: any) {
+        console.error(`  [mostaql] Enrich failed for ${p.external_id}: ${err.message}`);
+      }
     }
 
     if (projects.length > 0) {
@@ -118,6 +147,9 @@ export async function scrapeMostaql(): Promise<MostaqlProject[]> {
           posted_at: p.posted_at,
           client_name: p.client_name,
           client_country: p.client_country,
+          proposals_count: p.proposals_count,
+          execution_time: p.execution_time || null,
+          client_hiring_rate: p.client_hiring_rate || null,
           raw_data: p,
           status: 'new',
         })),

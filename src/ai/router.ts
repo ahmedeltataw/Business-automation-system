@@ -61,6 +61,15 @@ This proposal must be an elite, human-sounding Arabic sales pitch.
 - summary_ar: one-sentence Arabic summary of the client's core request
 - recommended_sales_angle: A short Arabic sentence suggesting how to pitch to this client
 - tailoredArabicProposal: A professional, high-conversion Arabic sales proposal (string)
+## Lead Scoring — Client Hiring Rate & Competition
+If the metadata includes 'client_hiring_rate' (a percentage string like '4.35%'):
+  - If the numeric value < 40%, append a warning to the 'lead_score_warning' field:
+    "⚠️ تنبيه: معدل توظيف العميل متدني جداً ({value}%)"
+If the metadata includes 'proposals_count' (integer):
+  - If > 15 (Khamsat), note in 'lead_score_warning': "تنافس عالي جداً ({count} عرض)"
+  - Consider reducing score by 1 if proposals > 20 (highly competitive)
+  - Add 'client_notes' from the metadata if present — these are extra requirements from the post author's comments. Include any critical criteria found there.
+
 - Respond with valid JSON only, no markdown formatting`;
 
 const SCHEMA = {
@@ -76,6 +85,7 @@ const SCHEMA = {
     summary_ar: { type: 'string' },
     recommended_sales_angle: { type: 'string' },
     tailoredArabicProposal: { type: 'string' },
+    lead_score_warning: { type: 'string' },
   },
   required: ['score', 'is_relevant', 'project_type', 'tech_stack', 'client_pain_points', 'budget_suitability', 'estimated_effort', 'summary_ar', 'recommended_sales_angle', 'tailoredArabicProposal'],
 };
@@ -91,6 +101,7 @@ interface JobAnalysis {
   summary_ar: string;
   recommended_sales_angle: string;
   tailoredArabicProposal: string;
+  lead_score_warning?: string;
 }
 
 export type AIEndpoint = 'qualify' | 'propose' | 'followup';
@@ -108,12 +119,31 @@ export class AllModelsExhaustedError extends Error {
   }
 }
 
+export interface JobMetadata {
+  platform?: string;
+  proposals_count?: number;
+  client_hiring_rate?: string;
+  client_notes?: string;
+  execution_time?: string;
+}
+
 class AIRouter {
-  async analyzeJob(title: string, description: string): Promise<JobAnalysis> {
+  async analyzeJob(title: string, description: string, metadata?: JobMetadata): Promise<JobAnalysis> {
+    let metaBlock = '';
+    if (metadata) {
+      const parts: string[] = [];
+      if (metadata.platform) parts.push(`Platform: ${metadata.platform}`);
+      if (metadata.proposals_count !== undefined) parts.push(`Proposals/Competitors count: ${metadata.proposals_count}`);
+      if (metadata.client_hiring_rate) parts.push(`Client hiring rate: ${metadata.client_hiring_rate}`);
+      if (metadata.client_notes) parts.push(`Client notes/extra requirements: ${metadata.client_notes}`);
+      if (metadata.execution_time) parts.push(`Execution time: ${metadata.execution_time}`);
+      if (parts.length > 0) metaBlock = `\n\nAdditional Metadata:\n${parts.join('\n')}`;
+    }
+
     const prompt = `Analyze this freelance job posting and return a structured JSON score.
 
 Job Title: "${title.trim()}"
-Description: "${description.trim()}"
+Description: "${description.trim()}"${metaBlock}
 
 Apply the scoring criteria strictly. Return valid JSON only.`;
 
@@ -280,6 +310,9 @@ function validateAnalysis(parsed: any): asserts parsed is JobAnalysis {
   }
   if (typeof parsed.recommended_sales_angle !== 'string' || !parsed.recommended_sales_angle) {
     parsed.recommended_sales_angle = '';
+  }
+  if (typeof parsed.lead_score_warning !== 'string') {
+    parsed.lead_score_warning = undefined;
   }
 }
 

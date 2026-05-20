@@ -17,6 +17,8 @@ export interface KhamsatRequest {
   posted_at: string;
   client_name: string;
   status: string;
+  proposals_count: number;
+  client_notes: string;
 }
 
 const TARGET_SECTIONS = [
@@ -124,9 +126,52 @@ export async function scrapeKhamsat(): Promise<KhamsatRequest[]> {
         posted_at: new Date().toISOString(),
         client_name: raw.client_name,
         status: 'new',
+        proposals_count: 0,
+        client_notes: '',
       };
 
       requests.push(request);
+    }
+
+    // Enrich top requests with detail-page metadata (comments count, author notes)
+    const enrichLimit = Math.min(requests.length, agentConfig.scrapers.maxEnrichPages ?? 10);
+    for (let i = 0; i < enrichLimit; i++) {
+      const r = requests[i];
+      if (!r.url) continue;
+      try {
+        await page.goto(r.url, { waitUntil: 'networkidle', timeout: agentConfig.scrapers.navTimeout });
+        await humanDelay(agentConfig.scrapers.humanDelay.min, agentConfig.scrapers.humanDelay.max);
+        const enriched = await page.evaluate(() => {
+          // Extract comments count from header text like "التعليقات (X)"
+          const headerText = document.body.innerText;
+          const commentsMatch = headerText.match(/التعليقات\s*\((\d+)\)/);
+          const count = commentsMatch ? parseInt(commentsMatch[1], 10) : 0;
+
+          // Check first 2-3 comments for author's own notes
+          const postTitleEl = document.querySelector('h3.details-head a') as HTMLElement | null;
+          const authorName = postTitleEl?.textContent?.trim() ?? '';
+          const commentEls = document.querySelectorAll('.comment-content, .comment_body, .post-comment');
+          let authorNote = '';
+          let checked = 0;
+          for (const el of commentEls) {
+            if (checked >= 3) break;
+            checked++;
+            const commentAuthor = el.querySelector('.user, .author, .comment-author');
+            const commentText = el.querySelector('.text, .comment-text, p');
+            if (commentAuthor && commentText && commentAuthor.textContent?.trim().includes(authorName.split(' ')[0] || '')) {
+              authorNote = commentText.textContent?.trim() || '';
+              break;
+            }
+          }
+
+          return { proposals_count: count, client_notes: authorNote };
+        });
+        r.proposals_count = enriched.proposals_count;
+        r.client_notes = enriched.client_notes;
+        console.log(`  [khamsat] Enriched #${r.external_id}: comments=${enriched.proposals_count} notes=${enriched.client_notes.slice(0, 80)}`);
+      } catch (err: any) {
+        console.error(`  [khamsat] Enrich failed for ${r.external_id}: ${err.message}`);
+      }
     }
 
     if (requests.length > 0) {
@@ -144,6 +189,8 @@ export async function scrapeKhamsat(): Promise<KhamsatRequest[]> {
           posted_at: r.posted_at,
           client_name: r.client_name,
           client_country: '',
+          proposals_count: r.proposals_count,
+          client_notes: r.client_notes || null,
           raw_data: r,
           status: r.status,
         })),
