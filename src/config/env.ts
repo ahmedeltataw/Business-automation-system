@@ -25,6 +25,8 @@ interface EnvConfig {
   CLOUDFLARE_API_TOKEN: string;
   DEEPSEEK_API_KEY: string;
   OPENROUTER_API_KEY: string;
+  FREELLM_API_KEY: string;
+  FREELLM_API_URL: string;
 }
 
 function ensure(key: string): string {
@@ -53,6 +55,8 @@ function loadEnv(): EnvConfig {
     CLOUDFLARE_API_TOKEN: optional('CLOUDFLARE_API_TOKEN'),
     DEEPSEEK_API_KEY: optional('DEEPSEEK_API_KEY'),
     OPENROUTER_API_KEY: optional('OPENROUTER_API_KEY'),
+    FREELLM_API_KEY: optional('FREELLM_API_KEY'),
+    FREELLM_API_URL: optional('FREELLM_API_URL', 'http://localhost:3001/v1'),
   };
 }
 

@@ -23,8 +23,8 @@ export interface ModelAlias {
 }
 
 // FreeLLMAPI unified proxy — single key, 9 providers
-const FREELLM_API_URL = process.env.FREELLM_API_URL || 'https://free.llm-api.com/v1';
-const FREELLM_API_KEY = process.env.FREELLM_API_KEY;
+const FREELLM_API_URL = env.FREELLM_API_URL || 'http://localhost:3001/v1';
+const FREELLM_API_KEY = env.FREELLM_API_KEY;
 
 const ALIASES: Record<string, ModelAlias> = {
   'free-lead-scorer': {
@@ -431,7 +431,7 @@ class LiteLLMGateway {
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
     startTime: number
   ): Promise<AIResponse> {
-    const apiKey = process.env.DEEPSEEK_API_KEY || env.GROQ_API_KEY;
+    const apiKey = env.DEEPSEEK_API_KEY || env.GROQ_API_KEY;
     if (!apiKey) throw new Error('DeepSeek: missing DEEPSEEK_API_KEY');
 
     const modelName = model.replace('deepseek/', '');
