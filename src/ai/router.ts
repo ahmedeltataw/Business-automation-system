@@ -237,8 +237,18 @@ export async function getRemainingQuota(): Promise<Record<string, number>> {
 
 function validateAnalysis(parsed: unknown): asserts parsed is JobAnalysis {
   const obj = parsed as Record<string, unknown>;
-  if (typeof obj.score !== 'number' || obj.score < 0 || obj.score > 5) {
+  // Defensive score resolution: handle string, alternative keys, and missing
+  let rawScore: unknown = obj.score;
+  if (rawScore === undefined) {
+    rawScore = obj.lead_score ?? obj.rating ?? obj.analysis_score;
+  }
+  if (typeof rawScore === 'string') {
+    rawScore = Number(rawScore);
+  }
+  if (typeof rawScore !== 'number' || isNaN(rawScore) || rawScore < 0 || rawScore > 5) {
     obj.score = 0;
+  } else {
+    obj.score = rawScore;
   }
   if (typeof obj.is_relevant !== 'boolean') {
     obj.is_relevant = false;
