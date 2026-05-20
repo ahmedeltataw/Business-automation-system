@@ -8,6 +8,7 @@
     "build": "tsc",
     "stop": "taskkill /F /IM node.exe /T",
     "manager:test": "ts-node src/system_manager/smoke_test.ts",
+    "manager:start": "ts-node src/system_manager/orchestrator.ts",
     "docker:build": "docker build -t freelance-sales-automation .",
     "docker:run": "docker run --env-file .env freelance-sales-automation"
   },
