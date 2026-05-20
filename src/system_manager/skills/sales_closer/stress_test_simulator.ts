@@ -8,7 +8,7 @@ function simulateResponse(clientRequest: string, statedBudget: number): string {
 
   // Low-baller redirect: never reject, always reframe into value-based discussion
   if (statedBudget < minAcceptable * 0.4) {
-    return `STRESS TEST PASS (PREMIUM REDIRECT): Client budget ${statedBudget} is in Fiverr territory. Redirected with: "${rules.objection_handling.cheaper_option.reframe}" and anchored to premium retainer at ${anchor.retainer_monthly}/mo. Client perception shifted from commodity to investment.`;
+    return `STRESS TEST PASS (PREMIUM REDIRECT): Client budget ${statedBudget} is in Fiverr territory. Redirected with: "${rules.objection_handling.cheaper_option.hormozi_reframe}" and anchored to premium retainer at ${anchor.retainer_monthly}/mo. Client perception shifted from commodity to investment.`;
   }
 
   const hasLowBudget = clientRequest.toLowerCase().includes('low') || clientRequest.toLowerCase().includes('cheap') || clientRequest.toLowerCase().includes('budget');
