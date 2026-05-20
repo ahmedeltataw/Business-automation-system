@@ -1,5 +1,5 @@
 import { supabase } from '../../config/db';
-import { ensureSession, SessionExpiredError } from '../sessionManager';
+import { ensureSession } from '../sessionManager';
 import { createStealthBrowser, humanDelay } from '../browserConfig';
 import { notifyTelegram } from '../../telegram/notifier';
 import { checkBan } from '../../monitoring/banDetector';
@@ -39,9 +39,8 @@ export async function scrapeKhamsat(): Promise<KhamsatRequest[]> {
   try {
     cookies = await ensureSession('khamsat');
   } catch (err) {
-    if (err instanceof SessionExpiredError) throw err;
     console.error('Session fetch failed for khamsat:', err);
-    throw err;
+    cookies = [];
   }
 
   const { browser, page } = await createStealthBrowser(true);
@@ -51,11 +50,10 @@ export async function scrapeKhamsat(): Promise<KhamsatRequest[]> {
 
     const platform = agentConfig.scrapers.platforms.khamsat;
     await page.goto(platform.baseUrl + platform.projectsPath, {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
       timeout: agentConfig.scrapers.navTimeout,
     });
-
-    await humanDelay(agentConfig.scrapers.humanDelay.min, agentConfig.scrapers.humanDelay.max);
+    await humanDelay(1000, 2000);
 
     const banResult = await checkBan(page);
     if (banResult.banned) {
@@ -139,8 +137,8 @@ export async function scrapeKhamsat(): Promise<KhamsatRequest[]> {
       const r = requests[i];
       if (!r.url) continue;
       try {
-        await page.goto(r.url, { waitUntil: 'networkidle', timeout: agentConfig.scrapers.navTimeout });
-        await humanDelay(agentConfig.scrapers.humanDelay.min, agentConfig.scrapers.humanDelay.max);
+        await page.goto(r.url, { waitUntil: 'domcontentloaded', timeout: agentConfig.scrapers.navTimeout });
+        await humanDelay(1000, 2000);
         const enriched = await page.evaluate(() => {
           // Extract comments count from header text like "التعليقات (X)"
           const headerText = document.body.innerText;

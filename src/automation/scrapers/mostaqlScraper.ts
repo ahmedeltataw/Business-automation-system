@@ -1,5 +1,5 @@
 import { supabase } from '../../config/db';
-import { ensureSession, SessionExpiredError } from '../sessionManager';
+import { ensureSession } from '../sessionManager';
 import { createStealthBrowser, humanDelay } from '../browserConfig';
 import { notifyTelegram } from '../../telegram/notifier';
 import { checkBan } from '../../monitoring/banDetector';
@@ -29,9 +29,8 @@ export async function scrapeMostaql(): Promise<MostaqlProject[]> {
   try {
     cookies = await ensureSession('mostaql');
   } catch (err) {
-    if (err instanceof SessionExpiredError) throw err;
     console.error('Session fetch failed for mostaql:', err);
-    throw err;
+    cookies = [];
   }
 
   const { browser, page } = await createStealthBrowser(true);
@@ -41,11 +40,10 @@ export async function scrapeMostaql(): Promise<MostaqlProject[]> {
 
     const platform = agentConfig.scrapers.platforms.mostaql;
     await page.goto(platform.baseUrl + platform.projectsPath, {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
       timeout: agentConfig.scrapers.navTimeout,
     });
-
-    await humanDelay(agentConfig.scrapers.humanDelay.min, agentConfig.scrapers.humanDelay.max);
+    await humanDelay(1000, 2000);
 
     const banResult = await checkBan(page);
     if (banResult.banned) {
@@ -113,8 +111,8 @@ export async function scrapeMostaql(): Promise<MostaqlProject[]> {
       const p = projects[i];
       if (!p.url) continue;
       try {
-        await page.goto(p.url, { waitUntil: 'networkidle', timeout: agentConfig.scrapers.navTimeout });
-        await humanDelay(agentConfig.scrapers.humanDelay.min, agentConfig.scrapers.humanDelay.max);
+        await page.goto(p.url, { waitUntil: 'domcontentloaded', timeout: agentConfig.scrapers.navTimeout });
+        await humanDelay(1000, 2000);
         const enriched = await page.evaluate(() => {
           const sidebarEl = document.querySelector('.project-card');
           const timeEl = sidebarEl?.querySelector('[class*="duration"], [class*="execution"], [class*="time"]');

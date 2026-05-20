@@ -21,16 +21,26 @@ export async function ensureSession(platform: string): Promise<any[]> {
 
   if (error || !data) {
     await notifyTelegram(
-      `⚠️ *Session Missing*\nNo session found for \`${platform}\`. Manual login required.`
+      `⚠️ *Session Missing*\nNo session found for \`${platform}\`. Falling back to public access.`
     );
-    throw new SessionExpiredError(platform);
+    return [];
   }
 
   const lastRefresh = new Date(data.last_refresh_at).getTime();
   const ageHours = (Date.now() - lastRefresh) / (1000 * 60 * 60);
 
   if (ageHours > agentConfig.sessionManager.expiryHours) {
-    await refreshSession(platform, data.session_cookies);
+    try {
+      return await refreshSession(platform, data.session_cookies);
+    } catch (err) {
+      if (err instanceof SessionExpiredError) {
+        await notifyTelegram(
+          `️ *Session Expired*\n\`${platform}\` session expired. Falling back to public access.`
+        );
+        return [];
+      }
+      throw err;
+    }
   }
 
   return data.session_cookies;
@@ -45,7 +55,8 @@ export async function refreshSession(platform: string, currentCookies: any): Pro
     }
 
     const targetUrl = agentConfig.sessionManager.platformUrls[platform] ?? `https://${platform}.com`;
-    await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: agentConfig.sessionManager.pageTimeout });
+    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: agentConfig.sessionManager.pageTimeout });
+    await page.waitForTimeout(3000);
 
     const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
     const loggedOutSignals = agentConfig.sessionManager.loggedOutSignals;
