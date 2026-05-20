@@ -247,8 +247,8 @@ class LiteLLMGateway {
 
     const modelName = model.replace('free-llm/', '');
 
-    // CI guard — no local FreeLLM proxy on the runner
-    if (process.env.GITHUB_ACTIONS) {
+    // CI guard — only on GitHub Actions with a localhost-only URL (no real proxy available)
+    if (process.env.GITHUB_ACTIONS === 'true' && FREELLM_API_URL.includes('localhost')) {
       console.log(`[LiteLLM] CI mode — mock response for free-llm/${modelName}`);
       return {
         text: JSON.stringify({
