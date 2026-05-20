@@ -7,12 +7,14 @@
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/cron/index.ts start",
     "build": "tsc",
     "stop": "taskkill /F /IM node.exe /T",
+    "manager:test": "ts-node src/system_manager/smoke_test.ts",
     "docker:build": "docker build -t freelance-sales-automation .",
     "docker:run": "docker run --env-file .env freelance-sales-automation"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
     "@octokit/action": "^8.0.4",
+    "@playwright/test": "^1.60.0",
     "@supabase/supabase-js": "^2.106.0",
     "dotenv": "^17.4.2",
     "grammy": "^1.43.0",
