@@ -31,15 +31,14 @@ export async function ensureSession(platform: string): Promise<any[]> {
 
   if (ageHours > agentConfig.sessionManager.expiryHours) {
     try {
-      return await refreshSession(platform, data.session_cookies);
-    } catch (err) {
-      if (err instanceof SessionExpiredError) {
-        await notifyTelegram(
-          `️ *Session Expired*\n\`${platform}\` session expired. Falling back to public access.`
-        );
-        return [];
+      const freshCookies = await refreshSession(platform, data.session_cookies);
+      if (freshCookies.length === 0) {
+        console.warn(`[${platform}] Session expired, continuing with public access`);
       }
-      throw err;
+      return freshCookies;
+    } catch (err) {
+      console.error(`[${platform}] Session refresh failed:`, err);
+      return [];
     }
   }
 
@@ -65,9 +64,9 @@ export async function refreshSession(platform: string, currentCookies: any): Pro
 
     if (!isLoggedIn) {
       await notifyTelegram(
-        `🚨 *Session Expired*\n\`${platform}\` session is no longer valid. Manual re-login required.`
+        `⚠️ *Mostaql Session Expired*\nFalling back to public guest scraping mode...`
       );
-      throw new SessionExpiredError(platform);
+      return [];
     }
 
     const freshCookies = await page.context().cookies();
