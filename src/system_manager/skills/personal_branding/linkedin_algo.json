@@ -1,0 +1,96 @@
+{
+  "skill": "personal_branding",
+  "version": "1.0.0",
+  "description": "LinkedIn algorithmic positioning engine — 2026 organic growth standards",
+  "platform_algorithm_factors_2026": {
+    "dwell_time_weight": 0.35,
+    "engagement_velocity": {
+      "first_60min_weight": 0.40,
+      "first_24h_weight": 0.30,
+      "first_72h_weight": 0.20,
+      "decay_rate": "exponential after 72h"
+    },
+    "content_type_boost": {
+      "native_video": 2.1,
+      "carousel_pdf": 1.8,
+      "text_with_image": 1.4,
+      "poll": 1.3,
+      "text_only": 1.0,
+      "external_link": 0.3
+    },
+    "profile_completeness_score": {
+      "minimum_for_algorithm_boost": 85,
+      "headline_keywords": "critical — first 120 chars indexed for search",
+      "about_section_min_chars": 1500,
+      "featured_sections_min": 3,
+      "recommendations_min": 5
+    },
+    "network_growth_signals": {
+      "connection_to_follower_ratio": "ideal < 1:3",
+      "weekly_new_connections_target": "50-100 relevant",
+      "engagement_rate_per_post_target": "> 5% in first 24h"
+    }
+  },
+  "seo_hook_matrix": {
+    "headline_formulas": [
+      {
+        "template": "Helping [Target Industry] [Achieve Outcome] via [Methodology] | [Title]",
+        "example": "Helping Saudi Fintechs Scale 3x via AI-Driven Automation | Growth Architect"
+      },
+      {
+        "template": "[Result] for [Niche] — [Title] | [Differentiator]",
+        "example": "300% Lead Growth for B2B SaaS — Full-Stack Engineer | System Architecture"
+      },
+      {
+        "template": "[Role] | [Technology Stack] | [Market Vertical]",
+        "example": "Principal Engineer | React+Node+AI | Middle East Enterprise"
+      }
+    ],
+    "keyword_clusters": {
+      "primary": ["SaaS Architecture", "AI Automation", "Full-Stack Development", "System Design", "Tech Lead"],
+      "secondary": ["Freelance", "Enterprise Solutions", "Cloud Infrastructure", "DevOps", "API Design"],
+      "market_specific_ksa": ["Saudi Vision 2030", "NEOM", "CST Certification", "NCA Compliance"],
+      "market_specific_mauritania": ["Digital Transformation Sahel", "Mobile Money West Africa", "Bilingual Tech Lead"]
+    },
+    "about_section_structure": {
+      "hook": "Problem → Agitation → Solution (PAS) formula, max 2 lines",
+      "credibility": "Specific metrics: 'Delivered 14 enterprise systems totaling 2.8M SAR in value'",
+      "differentiation": "What makes you the ONLY choice for this niche",
+      "cta": "Clear next step: 'DM me 'AUDIT' for a free profile review'"
+    }
+  },
+  "inbound_pitch_structures": {
+    "cold_dm_template": {
+      "opener": "Hi [Name], noticed your work on [Specific Project/Post]. I specialize in [Value Proposition] for [Industry].",
+      "value_proof": "Recently helped [Similar Client] achieve [Specific Result]. Here's how: [1-line case study].",
+      "offer": "Would you be open to a 15-min call on [Specific Topic] this week?",
+      "cta": "No pitch — just value. What does your Thursday look like?"
+    },
+    "comment_to_dm_sequence": {
+      "day_1": "Add valuable insight to their post (not just 'great post!')",
+      "day_3": "Share related resource or article",
+      "day_5": "Send DM referencing your previous interaction"
+    },
+    "content_to_lead_magnet": {
+      "step_1": "Post value-driven content for 5-7 days straight",
+      "step_2": "Analyze which topic got highest engagement",
+      "step_3": "DM everyone who engaged: 'You liked my post on [Topic] — I created a detailed framework. Want it?'"
+    }
+  },
+  "algorithm_gaming_prevention": {
+    "do_not": [
+      "Post external links (kills reach)",
+      "Use engagement bait (tagging, 'comment yes')",
+      "Delete and repost (shadowban risk)",
+      "Use same hashtags every post",
+      "Post more than 2x/day"
+    ],
+    "do": [
+      "Post native video (minimum 3 min watch time target)",
+      "Reply to every comment within 60 min of posting",
+      "Use 3-5 niche hashtags + 1 broad hashtag",
+      "Cross-reference thought leaders in your posts",
+      "Post Sun-Wed for max algorithmic boost"
+    ]
+  }
+}
