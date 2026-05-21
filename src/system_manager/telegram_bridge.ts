@@ -320,8 +320,6 @@ Platform: ${platform}`;
   /* ── Normal Chat — ELKing Engine ───────────────────────── */
 
   try {
-    await bot.sendMessage(chatId, '*ELKing is thinking...*', { parse_mode: 'Markdown' });
-
     const history = getChatHistory(chatId);
     appendToHistory(chatId, { role: 'user', content: text });
 
