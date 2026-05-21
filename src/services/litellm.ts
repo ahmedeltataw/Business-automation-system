@@ -47,6 +47,36 @@ const ALIASES: Record<string, ModelAlias> = {
       'hf/meta-llama/Llama-3.3-70B-Instruct',
     ],
   },
+  'elking-general': {
+    name: 'elking-general',
+    models: [
+      'gemini-2.5-flash',
+      'groq/llama3-8b-8192',
+      'hf/meta-llama/Llama-3.3-70B-Instruct',
+    ],
+  },
+  'elking-code': {
+    name: 'elking-code',
+    models: [
+      'gemini-2.5-flash',
+      'groq/llama3-8b-8192',
+    ],
+  },
+  'elking-sales': {
+    name: 'elking-sales',
+    models: [
+      'deepseek/deepseek-chat',
+      'gemini-2.5-flash',
+      'groq/llama3-8b-8192',
+    ],
+  },
+  'elking-branding': {
+    name: 'elking-branding',
+    models: [
+      'gemini-2.5-flash',
+      'groq/llama3-8b-8192',
+    ],
+  },
 };
 
 const COOLDOWN_MS: Record<string, number> = {};

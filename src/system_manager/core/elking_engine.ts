@@ -117,28 +117,28 @@ function buildParams(type: RequestType): GenerationParams {
       return {
         temperature: 0.2,
         maxTokens: 2000,
-        model: 'gemini-2.5-flash',
+        model: 'elking-code',
         systemPrompt: `${fullSystem}\n\n## Mode: Code & Engineering\n- Use low-temperature precision\n- Prefer specific code examples and measurable metrics\n- Reference Astro 5, Vite 6, Lighthouse > 90%, Clean Code principles explicitly when relevant`,
       };
     case 'sales':
       return {
         temperature: 0.8,
         maxTokens: 2500,
-        model: 'deepseek/deepseek-chat',
+        model: 'elking-sales',
         systemPrompt: `${fullSystem}\n\n## Mode: Sales & Negotiation\n- Use higher-temperature creative framing\n- Always apply Hormozi Value Equation and Voss calibrated questions\n- Provide complete pitch scripts when appropriate`,
       };
     case 'branding':
       return {
         temperature: 0.7,
         maxTokens: 2000,
-        model: 'gemini-2.5-flash',
+        model: 'elking-branding',
         systemPrompt: `${fullSystem}\n\n## Mode: Branding & Content\n- Apply LinkedIn 2026 algorithm insights\n- Focus on premium positioning and authority building\n- Provide actionable content structures`,
       };
     default:
       return {
         temperature: 0.5,
         maxTokens: 1500,
-        model: 'gemini-2.5-flash',
+        model: 'elking-general',
         systemPrompt: fullSystem,
       };
   }
@@ -197,7 +197,7 @@ export class ELKingEngine {
 
       const contextualizedPrompt = `${historyBlock}${pineconeContext}\nuser: ${userPrompt}`.trim();
       const result = await Promise.race([
-        litellm.callRaw(params.model, contextualizedPrompt, params.systemPrompt),
+        litellm.call(params.model, contextualizedPrompt, params.systemPrompt),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('generateKingResponse: 10s timeout')), GENERATE_TIMEOUT_MS)
         ),
