@@ -27,9 +27,16 @@ import fs from 'fs';
 /* ------------------------------------------------------------------ */
 
 const ALLOWED_CHAT_ID = (env.TELEGRAM_ALLOWED_CHAT_ID || env.TELEGRAM_CHAT_ID).trim();
+const FALLBACK_MSG = 'الملك هنج وهو بيكلم السحاب يا ليدر، ثواني وبظبط الـ Connection!';
+
+console.log(`[TelegramBridge] ALLOWED_CHAT_ID="${ALLOWED_CHAT_ID}" (type=${typeof ALLOWED_CHAT_ID})`);
 
 function isAuthorized(chatId: number): boolean {
-  return chatId.toString() === ALLOWED_CHAT_ID;
+  const result = chatId.toString() === ALLOWED_CHAT_ID;
+  if (!result) {
+    console.warn(`[TelegramBridge] Auth FAIL: incoming chatId=${chatId} ("${chatId.toString()}") !== "${ALLOWED_CHAT_ID}"`);
+  }
+  return result;
 }
 
 /* ------------------------------------------------------------------ */
@@ -312,11 +319,10 @@ Platform: ${platform}`;
 
   /* ── Normal Chat — ELKing Engine ───────────────────────── */
 
-  await bot.sendMessage(chatId, '*ELKing is thinking...*', { parse_mode: 'Markdown' });
-
   try {
-    const history = getChatHistory(chatId);
+    await bot.sendMessage(chatId, '*ELKing is thinking...*', { parse_mode: 'Markdown' });
 
+    const history = getChatHistory(chatId);
     appendToHistory(chatId, { role: 'user', content: text });
 
     const reply = await elkingEngine.generateKingResponse(text, history);
@@ -325,7 +331,12 @@ Platform: ${platform}`;
 
     await bot.sendMessage(chatId, reply, { parse_mode: 'Markdown' });
   } catch (err: any) {
-    await bot.sendMessage(chatId, `*ELKing Error:* ${err.message.slice(0, 200)}`, { parse_mode: 'Markdown' });
+    console.error(`[TelegramBridge] Chat error: ${err.message}`);
+    try {
+      await bot.sendMessage(chatId, FALLBACK_MSG, { parse_mode: 'Markdown' });
+    } catch {
+      console.error('[TelegramBridge] Fatal: cannot send ANY message — bot may be dead');
+    }
   }
 });
 
