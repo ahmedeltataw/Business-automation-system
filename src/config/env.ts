@@ -33,6 +33,7 @@ interface EnvConfig {
   GEMINI_API_KEY_2: string;
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_CHAT_ID: string;
+  TELEGRAM_ALLOWED_CHAT_ID: string;
   GROQ_API_KEY: string;
   GROQ_API_KEY_2: string;
   HF_TOKEN: string;
@@ -62,6 +63,7 @@ function loadEnv(): EnvConfig {
     GEMINI_API_KEY_2: optional('GEMINI_API_KEY_2'),
     TELEGRAM_BOT_TOKEN: ensure('TELEGRAM_BOT_TOKEN'),
     TELEGRAM_CHAT_ID: ensure('TELEGRAM_CHAT_ID'),
+    TELEGRAM_ALLOWED_CHAT_ID: optional('TELEGRAM_ALLOWED_CHAT_ID'),
     GROQ_API_KEY: ensure('GROQ_API_KEY'),
     GROQ_API_KEY_2: optional('GROQ_API_KEY_2'),
     HF_TOKEN: optional('HF_TOKEN'),

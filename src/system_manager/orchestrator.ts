@@ -276,6 +276,7 @@ export async function orchestratorLoop(maxCycles = 1, isDryRun = false): Promise
 if (require.main === module) {
   const args = process.argv.slice(2);
   const isDryRun = args.includes('--dry-run');
+  const startBridge = args.includes('--bridge');
   const cycles = parseInt(args.find((a) => a.startsWith('--cycles='))?.split('=')[1] || '1', 10);
 
   if (isDryRun) {
@@ -283,8 +284,23 @@ if (require.main === module) {
     console.log('');
   }
 
+  if (startBridge) {
+    console.log('📡 Starting Telegram bridge in background...');
+    import('./telegram_bridge.js').then(({ startTelegramBridge }) => {
+      startTelegramBridge().catch((err: any) =>
+        console.error('[Bridge] Fatal:', err)
+      );
+    });
+  }
+
   orchestratorLoop(cycles, isDryRun)
-    .then(() => process.exit(0))
+    .then(() => {
+      if (startBridge) {
+        console.log('\n📡 Bridge remains active — use Ctrl+C to stop all');
+      } else {
+        process.exit(0);
+      }
+    })
     .catch((err) => {
       console.error(`\n❌ Orchestrator failed: ${err.message}`);
       process.exit(1);
