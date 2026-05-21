@@ -10,14 +10,17 @@
     "manager:test": "ts-node src/system_manager/smoke_test.ts",
     "manager:start": "ts-node src/system_manager/orchestrator.ts",
     "manager:bridge": "ts-node src/system_manager/telegram_bridge.ts",
+    "start:king": "ts-node src/system_manager/telegram_bridge.ts",
     "docker:build": "docker build -t freelance-sales-automation .",
     "docker:run": "docker run --env-file .env freelance-sales-automation"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
     "@octokit/action": "^8.0.4",
+    "@pinecone-database/pinecone": "^7.2.0",
     "@playwright/test": "^1.60.0",
     "@supabase/supabase-js": "^2.106.0",
+    "cheerio": "^1.2.0",
     "dotenv": "^17.4.2",
     "grammy": "^1.43.0",
     "groq-sdk": "^1.2.0",

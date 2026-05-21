@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as cheerio from 'cheerio';
 import { elkingEngine } from './elking_engine';
+import { kingVectorDB } from './vector_db';
 
 interface SearchResult {
   title: string;
@@ -32,13 +33,21 @@ export class WebExplorer {
       results.slice(0, 3).map(r => this.scrapeUrl(r.url))
     );
 
+    let memoryContext = '';
+    try {
+      const memory = await kingVectorDB.queryKingMemory(query, 3);
+      if (memory.length > 0) {
+        memoryContext = `\n\n## Related knowledge from your memory base\n${memory.map(m => m.text.slice(0, 1500)).join('\n---\n')}`;
+      }
+    } catch { /* proceed */ }
+
     const context = results.map((r, i) =>
       `[${i + 1}] ${r.title}\nURL: ${r.url}\nSnippet: ${r.snippet}\n${
         scrapedTexts[i] ? `Content: ${scrapedTexts[i]!.slice(0, 2000)}` : ''
       }`
     ).join('\n\n');
 
-    const synthesisPrompt = `حلل و لخص المعلومات دي عن "${query}":\n\nالمصادر:\n${context}\n\nالمطلوب:\n- خلص الكلام في 3-4 نقاط رئيسية\n- حط روابط المصادر\n- استخدم أسلوبك التقني الحاد\n- لو الموضوع تقني، استخدم المقاييس و المعايير المتاحة`;
+    const synthesisPrompt = `حلل و لخص المعلومات دي عن "${query}":\n\nالمصادر:\n${context}${memoryContext}\n\nالمطلوب:\n- خلص الكلام في 3-4 نقاط رئيسية\n- حط روابط المصادر\n- استخدم أسلوبك التقني الحاد\n- لو الموضوع تقني، استخدم المقاييس و المعايير المتاحة`;
 
     return elkingEngine.generateKingResponse(synthesisPrompt, []);
   }
@@ -66,6 +75,12 @@ export class WebExplorer {
         JSON.stringify(entry, null, 2),
         'utf-8'
       );
+
+      await kingVectorDB.upsertKnowledge(
+        `web_${Date.now()}`,
+        content.slice(0, 5000),
+        { source: url, title, type: 'web_knowledge' }
+      ).catch(() => {});
 
       return true;
     } catch {

@@ -41,7 +41,8 @@ interface EnvConfig {
   CLOUDFLARE_API_TOKEN: string;
   DEEPSEEK_API_KEY: string;
   OPENROUTER_API_KEY: string;
-
+  PINECONE_API_KEY: string;
+  PINECONE_INDEX_NAME: string;
 }
 
 function ensure(key: string): string {
@@ -71,7 +72,8 @@ function loadEnv(): EnvConfig {
     CLOUDFLARE_API_TOKEN: optional('CLOUDFLARE_API_TOKEN'),
     DEEPSEEK_API_KEY: optional('DEEPSEEK_API_KEY'),
     OPENROUTER_API_KEY: optional('OPENROUTER_API_KEY'),
-
+    PINECONE_API_KEY: optional('PINECONE_API_KEY'),
+    PINECONE_INDEX_NAME: optional('PINECONE_INDEX_NAME'),
   };
 }
 

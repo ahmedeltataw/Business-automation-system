@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { litellm } from '../../services/litellm';
+import { kingVectorDB } from './vector_db';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -176,10 +177,21 @@ export class ELKingEngine {
     console.log(`[ELKingEngine] Type=${type} Model=${params.model} Temp=${params.temperature} Skills=${this.loadedSkills}`);
 
     const truncatedHistory = truncateHistory(history, MAX_CONTEXT_TOKENS);
-    const contextualizedPrompt = truncatedHistory.length > 0
-      ? `${truncatedHistory.map(m => `${m.role}: ${m.content}`).join('\n')}\n\nuser: ${userPrompt}`
-      : userPrompt;
+    const historyBlock = truncatedHistory.length > 0
+      ? `${truncatedHistory.map(m => `${m.role}: ${m.content}`).join('\n')}\n\n`
+      : '';
 
+    let pineconeContext = '';
+    try {
+      const memory = await kingVectorDB.queryKingMemory(userPrompt, 3);
+      if (memory.length > 0) {
+        pineconeContext = `\n## Relevant knowledge from memory\n${memory.map(m => `[${m.source} — ${(m.score * 100).toFixed(0)}% match]\n${m.text}`).join('\n\n')}\n`;
+      }
+    } catch {
+      // Pinecone not available — proceed without
+    }
+
+    const contextualizedPrompt = `${historyBlock}${pineconeContext}\nuser: ${userPrompt}`.trim();
     const result = await litellm.callRaw(params.model, contextualizedPrompt, params.systemPrompt);
     return result.text;
   }
