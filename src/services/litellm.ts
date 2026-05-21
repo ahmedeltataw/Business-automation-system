@@ -28,7 +28,7 @@ const ALIASES: Record<string, ModelAlias> = {
     models: [
       'cloudflare/@cf/meta/llama-3.1-8b-instruct',
       'gemini-2.5-flash',
-      'groq/llama3-8b-8192',
+      'groq/llama-3.1-8b-instant',
     ],
   },
   'proposal-generator': {
@@ -51,7 +51,7 @@ const ALIASES: Record<string, ModelAlias> = {
     name: 'elking-general',
     models: [
       'gemini-2.5-flash',
-      'groq/llama3-8b-8192',
+      'groq/llama-3.1-8b-instant',
       'hf/meta-llama/Llama-3.3-70B-Instruct',
     ],
   },
@@ -59,7 +59,7 @@ const ALIASES: Record<string, ModelAlias> = {
     name: 'elking-code',
     models: [
       'gemini-2.5-flash',
-      'groq/llama3-8b-8192',
+      'groq/llama-3.1-8b-instant',
     ],
   },
   'elking-sales': {
@@ -67,14 +67,14 @@ const ALIASES: Record<string, ModelAlias> = {
     models: [
       'deepseek/deepseek-chat',
       'gemini-2.5-flash',
-      'groq/llama3-8b-8192',
+      'groq/llama-3.1-8b-instant',
     ],
   },
   'elking-branding': {
     name: 'elking-branding',
     models: [
       'gemini-2.5-flash',
-      'groq/llama3-8b-8192',
+      'groq/llama-3.1-8b-instant',
     ],
   },
 };
