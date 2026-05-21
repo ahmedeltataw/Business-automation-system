@@ -12,6 +12,7 @@
     "manager:bridge": "ts-node src/system_manager/telegram_bridge.ts",
     "start:king": "ts-node src/system_manager/telegram_bridge.ts",
     "db:migrate": "ts-node src/system_manager/scripts/migrate_local_to_cloud.ts",
+    "watch:system": "ts-node src/system_manager/monitoring/watcher.ts",
     "docker:build": "docker build -t freelance-sales-automation .",
     "docker:run": "docker run --env-file .env freelance-sales-automation"
   },

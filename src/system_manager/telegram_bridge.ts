@@ -1,3 +1,5 @@
+import './monitoring/logger';
+
 /**
  * Telegram Bridge — Two-Way Chat & System Control Interface
  *
