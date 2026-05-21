@@ -9,7 +9,7 @@
     "stop": "taskkill /F /IM node.exe /T",
     "manager:test": "ts-node src/system_manager/smoke_test.ts",
     "manager:start": "ts-node src/system_manager/orchestrator.ts",
-"manager:bridge": "ts-node src/system_manager/telegram_bridge.ts",
+    "manager:bridge": "ts-node src/system_manager/telegram_bridge.ts",
     "docker:build": "docker build -t freelance-sales-automation .",
     "docker:run": "docker run --env-file .env freelance-sales-automation"
   },
@@ -24,6 +24,7 @@
     "ioredis": "^5.10.1",
     "libsodium-wrappers": "^0.8.4",
     "node-cron": "^4.2.1",
+    "node-telegram-bot-api": "^0.67.0",
     "openai": "^6.38.0",
     "pg": "^8.21.0",
     "playwright": "^1.60.0",
@@ -34,6 +35,7 @@
   "devDependencies": {
     "@types/node": "^25.9.0",
     "@types/node-cron": "^3.0.11",
+    "@types/node-telegram-bot-api": "^0.64.14",
     "@types/pg": "^8.20.0",
     "@types/screenshot-desktop": "^1.15.0",
     "nodemon": "^3.1.0",
