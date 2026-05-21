@@ -15,6 +15,7 @@ import { loadLearningContext, getPerformanceSummary } from './learning_memory';
 import { supabase, TABLES } from '../config/db';
 import { aiRouter } from '../ai/router';
 import { elkingEngine, type ChatMessage } from './core/elking_engine';
+import { webExplorer } from './core/web_explorer';
 import screenshotDesktop from 'screenshot-desktop';
 import { execSync } from 'child_process';
 import os from 'os';
@@ -90,13 +91,15 @@ bot.on('message', async (msg: Message) => {
         const helpMsg = `👑 *ELKing System Manager OS — Operational Mode Active* 👑
 
 *Available Commands*
-┌─────────────────────────────┐
-│ \`/status\`     System & AI health │
-│ \`/pc_status\`  Machine metrics      │
-│ \`/screenshot\` Desktop capture      │
-│ \`/exec\`       Shell execution      │
-│ \`/help\`       This menu            │
-└─────────────────────────────┘
+┌───────────────────────────────────┐
+│ \`/status\`       System & AI health    │
+│ \`/pc_status\`    Machine metrics        │
+│ \`/screenshot\`   Desktop capture        │
+│ \`/exec\`         Shell execution        │
+│ \`/research\`     Web research & synths  │
+│ \`/learn\`        Ingest URL into memory │
+│ \`/help\`         This menu              │
+└───────────────────────────────────┘
 
 *Chat Mode*
 Send any message — I'll route it through our cloud AI with full Tech Academy + Sales Closer knowledge injection. Think of me as your co-founder on speed dial, يا ليدر.
@@ -227,6 +230,48 @@ Platform: ${platform}`;
           if (fs.existsSync(screenshotPath)) {
             fs.unlinkSync(screenshotPath);
           }
+        }
+        return;
+      }
+
+      /* ── /research <query> ── */
+      case '/research': {
+        const query = text.slice(9).trim();
+        if (!query) {
+          await bot.sendMessage(chatId, '*Usage:* /research <query>\n_Example:_ /research latest AI agents 2026', { parse_mode: 'Markdown' });
+          return;
+        }
+
+        await bot.sendMessage(chatId, `*🔍 Researching:* ${query}`, { parse_mode: 'Markdown' });
+
+        try {
+          const summary = await webExplorer.searchAndSynthesize(query);
+          await bot.sendMessage(chatId, summary, { parse_mode: 'Markdown' });
+        } catch (err: any) {
+          await bot.sendMessage(chatId, `*Research Error:* ${err.message.slice(0, 200)}`, { parse_mode: 'Markdown' });
+        }
+        return;
+      }
+
+      /* ── /learn <url> ── */
+      case '/learn': {
+        const url = text.slice(6).trim();
+        if (!url) {
+          await bot.sendMessage(chatId, '*Usage:* /learn <url>\n_Example:_ /learn https://example.com/docs', { parse_mode: 'Markdown' });
+          return;
+        }
+
+        await bot.sendMessage(chatId, `*📖 Learning from:* ${url}`, { parse_mode: 'Markdown' });
+
+        try {
+          const success = await webExplorer.ingestUrlToMemory(url);
+          if (success) {
+            await bot.sendMessage(chatId, `*✅ Knowledge ingested successfully.*\nELKing's brain just got bigger, يا ليدر.`, { parse_mode: 'Markdown' });
+          } else {
+            await bot.sendMessage(chatId, '*⚠️ Could not extract meaningful content from that URL.*', { parse_mode: 'Markdown' });
+          }
+        } catch (err: any) {
+          await bot.sendMessage(chatId, `*Learn Error:* ${err.message.slice(0, 200)}`, { parse_mode: 'Markdown' });
         }
         return;
       }
