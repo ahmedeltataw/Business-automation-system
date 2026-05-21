@@ -1,7 +1,12 @@
 import { Pinecone } from '@pinecone-database/pinecone';
 import { env } from '../../config/env';
 
-const EMBEDDING_MODEL = 'text-embedding-004';
+interface KnowledgeRecord {
+  text: string;
+  source: string;
+  type?: string;
+  title?: string;
+}
 
 export class KingVectorDB {
   private pc: Pinecone | null = null;
@@ -19,32 +24,20 @@ export class KingVectorDB {
     this.ready = true;
   }
 
-  private async embed(text: string): Promise<number[]> {
-    const { GoogleGenAI } = await import('@google/genai');
-    if (!env.GEMINI_API_KEY) throw new Error('[VectorDB] GEMINI_API_KEY required for embeddings');
-    const genAI = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-    const response = await genAI.models.embedContent({
-      model: EMBEDDING_MODEL,
-      contents: text,
-    });
-    const values = response.embeddings?.[0]?.values;
-    if (!values || values.length === 0) throw new Error('[VectorDB] Empty embedding response');
-    return values;
-  }
-
   async upsertKnowledge(
     id: string,
     text: string,
-    metadata: Record<string, unknown> = {}
+    metadata: Partial<KnowledgeRecord> = {}
   ): Promise<void> {
     if (!this.index) return;
     try {
-      const values = await this.embed(text.slice(0, 8000));
-      await this.index.upsert({
+      await this.index.upsertRecords({
         records: [{
-          id,
-          values,
-          metadata: { text: text.slice(0, 2000), ...metadata },
+          _id: id,
+          text,
+          source: metadata.source || 'unknown',
+          type: metadata.type || 'general',
+          title: metadata.title || '',
         }],
       });
       console.log(`[VectorDB] Upserted ${id}`);
@@ -56,18 +49,19 @@ export class KingVectorDB {
   async queryKingMemory(query: string, limit = 5): Promise<{ text: string; score: number; source: string }[]> {
     if (!this.index) return [];
     try {
-      const vector = await this.embed(query);
-      const result = await this.index.query({
-        vector,
-        topK: limit,
-        includeMetadata: true,
+      const result = await this.index.searchRecords({
+        query: {
+          inputs: { text: query },
+          topK: limit,
+        },
+        fields: ['text', 'source', 'type', 'title'],
       });
-      return result.matches
-        .filter(m => m.metadata?.text && m.score)
-        .map(m => ({
-          text: m.metadata!.text as string,
-          score: m.score!,
-          source: (m.metadata?.source as string) || 'unknown',
+      return (result.result?.hits || [])
+        .filter(h => h._score && h.fields)
+        .map(h => ({
+          text: (h.fields as Record<string, string>)?.text || '',
+          score: h._score,
+          source: (h.fields as Record<string, string>)?.source || 'unknown',
         }));
     } catch (err: any) {
       console.error(`[VectorDB] Query failed: ${err.message}`);
