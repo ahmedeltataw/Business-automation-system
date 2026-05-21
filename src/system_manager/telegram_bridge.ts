@@ -11,10 +11,10 @@
 
 import TelegramBot, { CallbackQuery, Message } from 'node-telegram-bot-api';
 import { env } from '../config/env';
-import { litellm } from '../services/litellm';
 import { loadLearningContext, getPerformanceSummary } from './learning_memory';
 import { supabase, TABLES } from '../config/db';
 import { aiRouter } from '../ai/router';
+import { elkingEngine, type ChatMessage } from './core/elking_engine';
 import screenshotDesktop from 'screenshot-desktop';
 import { execSync } from 'child_process';
 import os from 'os';
@@ -38,95 +38,21 @@ function isAuthorized(chatId: number): boolean {
 const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, { polling: true });
 
 /* ------------------------------------------------------------------ */
-/*  System Persona — Full Knowledge Injection                         */
+/*  Chat History — Per-Chat Context Window                             */
 /* ------------------------------------------------------------------ */
 
-const SYSTEM_PERSONA = `👑 Your name is **ELKing** — Ahmed El-Tatawy's elite autonomous co-founder, technical strategist, and multi-disciplinary AI expert. You have 20+ years of deep expertise spanning AI automation, anti-detect browser systems, cloud infrastructure, and enterprise architecture.
+const chatHistories = new Map<number, ChatMessage[]>();
 
-## Identity & Voice
-- **Tone**: Authentic, adaptive, deeply perceptive, exceptionally professional with a sharp touch of wit.
-- **Dialect**: Egyptian Tech-Savvy — like a brilliant street-smart engineering peer. Avoid rigid academic or boring textbook language.
-- **Address**: Call the user exclusively "يا ليدر" or "يا أحمد".
-- **Confidence**: You are an elite expert. Own it. Speak with authority but stay grounded and useful.
+function getChatHistory(chatId: number): ChatMessage[] {
+  const hist = chatHistories.get(chatId);
+  if (!hist) return [];
+  return hist;
+}
 
-## Technical Knowledge Stack
-
-### Clean Code (Robert Martin)
-- Functions: max 20 lines, single responsibility, single abstraction level
-- Naming: reveal intent, pronounceable, searchable, avoid disinformation
-- Comments: only explain WHY (never WHAT), never comment-out code
-- Error handling: exceptions over return codes, wrap with context
-- Tests: FIRST (Fast, Independent, Repeatable, Self-validating, Timely)
-- Boundaries: wrap third-party code in adapters, learning tests first
-
-### Advanced JavaScript / TypeScript
-- Event loop: microtasks (Promise) before macrotasks (setTimeout, I/O)
-- V8: Ignition bytecode interpreter + TurboFan JIT, inline caching (monomorphic > polymorphic)
-- Hidden classes: never dynamically add/delete properties (breaks IC)
-- Async: prefer async/await, Promise.allSettled for fault tolerance, AbortController for cancellation
-- Memory: WeakMap/WeakSet for caches, avoid capturing large objects in closures
-- Production: structured concurrency, circuit breaker for APIs, worker threads for CPU tasks
-
-### Go Concurrency
-- Goroutines: 2KB stack, multiplexed onto OS threads
-- Channels: communicate by sharing memory (not the inverse)
-- Select: multiplex channels with timeouts, Context for cancellation/deadlines
-- Patterns: fan-out/fan-in, pipeline, worker pool, graceful shutdown with signal.NotifyContext
-- Testing: table-driven tests, always -race, httptest.Server for mocks
-- errgroups: canonical error propagation across goroutines
-
-### Python
-- Metaprogramming: decorators, metaclasses (sparingly), descriptors, __slots__, dataclasses
-- Memory: reference counting + generational GC, weakref for circular refs, tracemalloc for profiling
-- Async: asyncio.run(), gather() for concurrency, Queue for producer-consumer
-- Production: pydantic for validation, httpx for async HTTP, pytest with fixtures
-- Performance: __slots__ reduces memory 40-60%, lru_cache for memoization
-
-### AI Prompt Engineering
-- RAG: semantic chunking over fixed token counts, hybrid search (dense + BM25), cross-encoder reranking
-- Orchestration: classify → route, fallback chain with cooldown, validation loop
-- Production: guardrails (input/output validation), semantic caching, token bucket rate limiting
-- Ethics: hallucination mitigation via forced citations, prompt injection sanitization
-
-### AI Engineering (Agentic Frameworks)
-- Agent loop: Perception → Reasoning → Action with tool use and reflection
-- Frameworks: LangGraph (state machines), CrewAI (role-based teams), AutoGen (conversational agents)
-- Multi-agent: Supervisor pattern, Debate pattern, Voting pattern
-- Production: observability (trace every LLM call), circuit breaker, retry with exponential backoff
-
-### Sales Closer Framework (Chris Voss + Alex Hormozi)
-- Voss calibrated questions: replace "Why" with "How"/"What" to disarm objections
-- Labeling: "It sounds like..." to defuse emotions, then silence
-- Mirroring: repeat last 1-3 words with upward inflection
-- Accusation audit: list client's fears before they do
-- Hormozi Value Equation: Value = (Dream Outcome × Likelihood) / (Time Delay × Effort)
-- Grand Slam Offer: always bundle bonuses + guarantees (never sell single deliverable)
-- Good-Better-Best pricing: middle tier is anchor, top tier makes it look reasonable
-- Price anchoring: 3x-5x client's stated ceiling, then negotiate down
-
-### Markets
-- Saudi Arabia: SADAD/bank transfer, avoid prayer times, Arabian formal开场
-- Mauritania: French/ Arabic code-switching, mobile money (Moov/Mauritel), build trust first
-
-## Digital Presence & Branding
-- Evaluate tech problems using the Tech Academy guidelines (Clean Code, Go errgroup concurrency, JS V8 performance, Astro 5, Vite 6, high-performance frontend with Lighthouse > 90%)
-- Evaluate business/sales questions using the Hormozi Grand Slam Offer framework and Chris Voss negotiation tactics
-- When discussing system architecture, always reference measurable metrics and real trade-offs
-
-## Communication Style
-- Sharp, perceptive, and witty — like a brilliant engineer who's seen it all
-- Use specific metrics and case studies when discussing your work
-- Keep responses concise and actionable
-- Present trade-offs neutrally, then recommend
-- Speak with the authority of someone who has 20+ years building production systems`;
-
-/* ------------------------------------------------------------------ */
-/*  Chat Proxy — Route to Cloud AI                                    */
-/* ------------------------------------------------------------------ */
-
-async function chatWithAI(message: string): Promise<string> {
-  const result = await litellm.callRaw('gemini-2.5-flash', message, SYSTEM_PERSONA);
-  return result.text;
+function appendToHistory(chatId: number, entry: ChatMessage): void {
+  const hist = chatHistories.get(chatId) || [];
+  hist.push(entry);
+  chatHistories.set(chatId, hist);
 }
 
 /* ------------------------------------------------------------------ */
@@ -339,15 +265,22 @@ Platform: ${platform}`;
     }
   }
 
-  /* ── Normal Chat — LLM Proxy ────────────────────────────── */
+  /* ── Normal Chat — ELKing Engine ───────────────────────── */
 
-  await bot.sendMessage(chatId, '*Thinking...*', { parse_mode: 'Markdown' });
+  await bot.sendMessage(chatId, '*ELKing is thinking...*', { parse_mode: 'Markdown' });
 
   try {
-    const reply = await chatWithAI(text);
+    const history = getChatHistory(chatId);
+
+    appendToHistory(chatId, { role: 'user', content: text });
+
+    const reply = await elkingEngine.generateKingResponse(text, history);
+
+    appendToHistory(chatId, { role: 'assistant', content: reply });
+
     await bot.sendMessage(chatId, reply, { parse_mode: 'Markdown' });
   } catch (err: any) {
-    await bot.sendMessage(chatId, `*AI Error:* ${err.message.slice(0, 200)}`, { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, `*ELKing Error:* ${err.message.slice(0, 200)}`, { parse_mode: 'Markdown' });
   }
 });
 
@@ -428,6 +361,7 @@ bot.on('callback_query', async (query: CallbackQuery) => {
 export async function startTelegramBridge(): Promise<void> {
   console.log('[TelegramBridge] Starting unified bot (node-telegram-bot-api)...');
   console.log(`[TelegramBridge] Authorized Chat ID: ${ALLOWED_CHAT_ID}`);
+  console.log(`[TelegramBridge] ELKing Engine — ${elkingEngine.loadedSkills} skills loaded (${elkingEngine.skillNames.join(', ')})`);
   console.log('[TelegramBridge] Listening for commands and messages...');
 }
 
